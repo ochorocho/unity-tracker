@@ -1,0 +1,24 @@
+parameters:
+  level: 6
+
+  paths:
+    - Classes
+    - Configuration
+    - Tests
+    - ext_localconf.php
+
+  # Stock bootstrap copied from typo3/testing-framework.
+  excludePaths:
+    - Tests/Unit/UnitTestsBootstrap.php
+
+  # The dev install's autoloader lives in Build/vendor.
+  bootstrapFiles:
+    - Build/vendor/autoload.php
+  scanDirectories:
+    - Build/vendor/typo3/cms-core/Classes
+    - Build/vendor/typo3/cms-backend/Classes
+    - Build/vendor/typo3/testing-framework/Classes
+
+  ignoreErrors:
+    -
+      identifier: missingType.iterableValue

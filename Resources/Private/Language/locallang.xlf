@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+	<file source-language="en" datatype="plaintext" original="EXT:unity_tracker/Resources/Private/Language/locallang.xlf" date="2026-11-25T00:00:00Z" product-name="unity_tracker">
+		<body>
+			<trans-unit id="overview.title" resname="overview.title">
+				<source>What needs my attention</source>
+			</trans-unit>
+			<trans-unit id="overview.fetchedAt" resname="overview.fetchedAt">
+				<source>Loaded %s</source>
+			</trans-unit>
+			<trans-unit id="overview.empty.title" resname="overview.empty.title">
+				<source>No connections yet</source>
+			</trans-unit>
+			<trans-unit id="overview.empty.text" resname="overview.empty.text">
+				<source>Add a GitLab or GitHub connection with a personal access token to see your to-dos, review requests, merge/pull requests and issues here.</source>
+			</trans-unit>
+			<trans-unit id="overview.empty.action" resname="overview.empty.action">
+				<source>Add connection</source>
+			</trans-unit>
+			<trans-unit id="overview.attention" resname="overview.attention">
+				<source>Needs attention</source>
+			</trans-unit>
+			<trans-unit id="overview.work" resname="overview.work">
+				<source>My work</source>
+			</trans-unit>
+			<trans-unit id="overview.nothing" resname="overview.nothing">
+				<source>Nothing here.</source>
+			</trans-unit>
+			<trans-unit id="overview.allDone" resname="overview.allDone">
+				<source>Nothing needs your attention right now.</source>
+			</trans-unit>
+			<trans-unit id="button.refresh" resname="button.refresh">
+				<source>Reload from GitLab/GitHub</source>
+			</trans-unit>
+			<trans-unit id="button.connections" resname="button.connections">
+				<source>Connections</source>
+			</trans-unit>
+			<trans-unit id="button.back" resname="button.back">
+				<source>Back to overview</source>
+			</trans-unit>
+			<trans-unit id="category.todo" resname="category.todo">
+				<source>To-dos and notifications</source>
+			</trans-unit>
+			<trans-unit id="category.reviewRequested" resname="category.reviewRequested">
+				<source>Review requested</source>
+			</trans-unit>
+			<trans-unit id="category.assignedChange" resname="category.assignedChange">
+				<source>Merge/pull requests assigned to me</source>
+			</trans-unit>
+			<trans-unit id="category.authoredChange" resname="category.authoredChange">
+				<source>My open merge/pull requests</source>
+			</trans-unit>
+			<trans-unit id="category.assignedIssue" resname="category.assignedIssue">
+				<source>Issues assigned to me</source>
+			</trans-unit>
+			<trans-unit id="column.title" resname="column.title">
+				<source>Title</source>
+			</trans-unit>
+			<trans-unit id="column.project" resname="column.project">
+				<source>Project</source>
+			</trans-unit>
+			<trans-unit id="column.author" resname="column.author">
+				<source>Author</source>
+			</trans-unit>
+			<trans-unit id="column.reason" resname="column.reason">
+				<source>Reason</source>
+			</trans-unit>
+			<trans-unit id="column.updated" resname="column.updated">
+				<source>Updated</source>
+			</trans-unit>
+			<trans-unit id="column.connection" resname="column.connection">
+				<source>Connection</source>
+			</trans-unit>
+			<trans-unit id="item.draft" resname="item.draft">
+				<source>Draft</source>
+			</trans-unit>
+			<trans-unit id="connections.title" resname="connections.title">
+				<source>Connections</source>
+			</trans-unit>
+			<trans-unit id="connections.intro" resname="connections.intro">
+				<source>Connections and their tokens belong to your backend user only. Tokens are stored encrypted.</source>
+			</trans-unit>
+			<trans-unit id="connections.none" resname="connections.none">
+				<source>You have no connections yet.</source>
+			</trans-unit>
+			<trans-unit id="connections.provider" resname="connections.provider">
+				<source>Provider</source>
+			</trans-unit>
+			<trans-unit id="connections.host" resname="connections.host">
+				<source>Host</source>
+			</trans-unit>
+			<trans-unit id="connections.account" resname="connections.account">
+				<source>Account</source>
+			</trans-unit>
+			<trans-unit id="connections.label" resname="connections.label">
+				<source>Name</source>
+			</trans-unit>
+			<trans-unit id="connections.delete" resname="connections.delete">
+				<source>Delete</source>
+			</trans-unit>
+			<trans-unit id="connections.delete.confirm" resname="connections.delete.confirm">
+				<source>Delete connection "%s"?</source>
+			</trans-unit>
+			<trans-unit id="connections.add" resname="connections.add">
+				<source>Add connection</source>
+			</trans-unit>
+			<trans-unit id="connections.form.provider" resname="connections.form.provider">
+				<source>Provider</source>
+			</trans-unit>
+			<trans-unit id="connections.form.host" resname="connections.form.host">
+				<source>Host</source>
+			</trans-unit>
+			<trans-unit id="connections.form.host.description" resname="connections.form.host.description">
+				<source>Leave empty for gitlab.com / github.com. Allowed hosts: %s</source>
+			</trans-unit>
+			<trans-unit id="connections.form.label" resname="connections.form.label">
+				<source>Name (optional)</source>
+			</trans-unit>
+			<trans-unit id="connections.form.token" resname="connections.form.token">
+				<source>Personal access token</source>
+			</trans-unit>
+			<trans-unit id="connections.form.token.description" resname="connections.form.token.description">
+				<source>GitLab: scope "read_api". GitHub: classic token with scopes "repo" and "notifications" (fine-grained tokens cannot read notifications).</source>
+			</trans-unit>
+			<trans-unit id="connections.form.submit" resname="connections.form.submit">
+				<source>Verify and save</source>
+			</trans-unit>
+			<trans-unit id="connections.added" resname="connections.added">
+				<source>Connected as "%s".</source>
+			</trans-unit>
+			<trans-unit id="connections.deleted" resname="connections.deleted">
+				<source>Connection deleted.</source>
+			</trans-unit>
+			<trans-unit id="error.title" resname="error.title">
+				<source>Could not load "%s"</source>
+			</trans-unit>
+			<trans-unit id="error.provider" resname="error.provider">
+				<source>Please choose GitLab or GitHub.</source>
+			</trans-unit>
+			<trans-unit id="error.token" resname="error.token">
+				<source>Please enter an access token.</source>
+			</trans-unit>
+			<trans-unit id="error.host.malformed" resname="error.host.malformed">
+				<source>"%s" is not a valid host. Enter a host name like gitlab.example.com.</source>
+			</trans-unit>
+			<trans-unit id="error.host.notHttps" resname="error.host.notHttps">
+				<source>"%s" does not use https.</source>
+			</trans-unit>
+			<trans-unit id="error.host.notAllowed" resname="error.host.notAllowed">
+				<source>Host "%s" is not allowed. An administrator can add it in the extension configuration of unity_tracker.</source>
+			</trans-unit>
+			<trans-unit id="error.fetch.missingToken" resname="error.fetch.missingToken">
+				<source>The stored token cannot be decrypted (the TYPO3 encryption key probably changed). Delete the connection and add it again.</source>
+			</trans-unit>
+			<trans-unit id="error.fetch.unauthorized" resname="error.fetch.unauthorized">
+				<source>The token was rejected (%2$s). It may have expired or lack the required scopes.</source>
+			</trans-unit>
+			<trans-unit id="error.fetch.rateLimited" resname="error.fetch.rateLimited">
+				<source>The API rate limit is exhausted (%2$s). Try again later.</source>
+			</trans-unit>
+			<trans-unit id="error.fetch.unreachable" resname="error.fetch.unreachable">
+				<source>%2$s cannot be reached.</source>
+			</trans-unit>
+			<trans-unit id="error.fetch.invalidResponse" resname="error.fetch.invalidResponse">
+				<source>The server did not answer with the expected JSON. Is the host a GitLab or GitHub server?</source>
+			</trans-unit>
+			<trans-unit id="error.fetch.failed" resname="error.fetch.failed">
+				<source>The request failed: %2$s</source>
+			</trans-unit>
+		</body>
+	</file>
+</xliff>

@@ -1,0 +1,77 @@
+<html
+    xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+    data-namespace-typo3-fluid="true"
+>
+<f:layout name="Module" />
+
+<f:section name="Content">
+    <h1><f:translate key="connections.title" extensionName="UnityTracker" /></h1>
+    <p><f:translate key="connections.intro" extensionName="UnityTracker" /></p>
+
+    <f:if condition="{connections}">
+        <f:then>
+            <div class="table-fit">
+                <table class="table table-striped table-hover" data-connections>
+                    <thead>
+                        <tr>
+                            <th><f:translate key="connections.label" extensionName="UnityTracker" /></th>
+                            <th><f:translate key="connections.provider" extensionName="UnityTracker" /></th>
+                            <th><f:translate key="connections.host" extensionName="UnityTracker" /></th>
+                            <th><f:translate key="connections.account" extensionName="UnityTracker" /></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <f:for each="{connections}" as="connection">
+                            <tr>
+                                <td>{connection.label}</td>
+                                <td>{connection.provider.name}</td>
+                                <td>{connection.host}</td>
+                                <td>{connection.account}</td>
+                                <td class="col-control">
+                                    <form method="post" action="{deleteUri}">
+                                        <input type="hidden" name="uid" value="{connection.uid}" />
+                                        <button type="submit" class="btn btn-default btn-sm">
+                                            <f:translate key="connections.delete" extensionName="UnityTracker" />
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </f:for>
+                    </tbody>
+                </table>
+            </div>
+        </f:then>
+        <f:else>
+            <p class="text-body-secondary"><f:translate key="connections.none" extensionName="UnityTracker" /></p>
+        </f:else>
+    </f:if>
+
+    <h2><f:translate key="connections.add" extensionName="UnityTracker" /></h2>
+    <form method="post" action="{addUri}" class="mb-4" style="max-width: 40rem" autocomplete="off">
+        <div class="form-group mb-3">
+            <label class="form-label" for="unitytracker-provider"><f:translate key="connections.form.provider" extensionName="UnityTracker" /></label>
+            <select class="form-select" id="unitytracker-provider" name="provider">
+                <f:for each="{providers}" as="provider">
+                    <option value="{provider.value}" {f:if(condition: '{provider.value} == {form.provider}', then: 'selected')}>{provider.label}</option>
+                </f:for>
+            </select>
+        </div>
+        <div class="form-group mb-3">
+            <label class="form-label" for="unitytracker-host"><f:translate key="connections.form.host" extensionName="UnityTracker" /></label>
+            <input class="form-control" type="text" id="unitytracker-host" name="host" value="{form.host}" placeholder="gitlab.com / github.com" />
+            <div class="form-text"><f:translate key="connections.form.host.description" extensionName="UnityTracker" arguments="{0: allowedHosts}" /></div>
+        </div>
+        <div class="form-group mb-3">
+            <label class="form-label" for="unitytracker-label"><f:translate key="connections.form.label" extensionName="UnityTracker" /></label>
+            <input class="form-control" type="text" id="unitytracker-label" name="label" value="{form.label}" maxlength="255" />
+        </div>
+        <div class="form-group mb-3">
+            <label class="form-label" for="unitytracker-token"><f:translate key="connections.form.token" extensionName="UnityTracker" /></label>
+            <input class="form-control" type="password" id="unitytracker-token" name="accessToken" required autocomplete="new-password" />
+            <div class="form-text"><f:translate key="connections.form.token.description" extensionName="UnityTracker" /></div>
+        </div>
+        <button type="submit" class="btn btn-primary"><f:translate key="connections.form.submit" extensionName="UnityTracker" /></button>
+    </form>
+</f:section>
+</html>

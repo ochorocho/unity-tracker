@@ -1,0 +1,15 @@
+{
+  "total_count": 1,
+  "incomplete_results": false,
+  "items": [
+    {
+      "number": 42, "title": "Fix login redirect", "state": "open", "draft": false,
+      "html_url": "https://github.com/acme/app/pull/42",
+      "repository_url": "https://api.github.com/repos/acme/app",
+      "user": { "login": "octocat" },
+      "labels": [{ "name": "bug" }, { "name": "security" }],
+      "pull_request": { "url": "https://api.github.com/repos/acme/app/pulls/42" },
+      "updated_at": "2026-11-24T10:00:00Z"
+    }
+  ]
+}

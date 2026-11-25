@@ -1,0 +1,14 @@
+{
+    "name": "ochorocho-unity-tracker",
+    "version": "1.0.0-dev",
+    "description": "Playwright end-to-end tests for EXT:unity_tracker. Run inside DDEV via the ochorocho/ddev-playwright add-on; @playwright/test must match the image tag in .ddev/.env.playwright.",
+    "private": true,
+    "type": "module",
+    "engines": {
+        "node": ">=20"
+    },
+    "devDependencies": {
+        "@playwright/test": "1.65.1",
+        "mysql2": "^3.24.6"
+    }
+}

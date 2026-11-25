@@ -1,0 +1,43 @@
+[
+  {
+    "id": 102,
+    "project": { "id": 3, "name": "Website", "path_with_namespace": "acme/website" },
+    "author": { "id": 2, "username": "jane" },
+    "action_name": "review_requested",
+    "target_type": "MergeRequest",
+    "target": {
+      "id": 34, "iid": 7, "title": "Add search", "state": "opened", "draft": true,
+      "labels": ["frontend", "needs review"],
+      "references": { "short": "!7", "relative": "!7", "full": "acme/website!7" }
+    },
+    "target_url": "https://gitlab.com/acme/website/-/merge_requests/7",
+    "body": "Add search",
+    "state": "pending",
+    "created_at": "2026-11-20T10:00:00.000Z",
+    "updated_at": "2026-11-24T09:30:00.000Z"
+  },
+  {
+    "id": 103,
+    "project": null,
+    "group": { "id": 9, "full_path": "acme" },
+    "author": { "id": 5, "username": "bob" },
+    "action_name": "mentioned",
+    "target_type": "Epic",
+    "target": { "id": 1, "iid": 4, "title": "Q4 roadmap" },
+    "target_url": "https://gitlab.com/groups/acme/-/epics/4",
+    "body": "@me please check",
+    "state": "pending",
+    "updated_at": "2026-11-23T08:00:00.000Z"
+  },
+  {
+    "id": 104,
+    "project": { "path_with_namespace": "acme/api" },
+    "author": { "username": "ci" },
+    "action_name": "build_failed",
+    "target_type": "Issue",
+    "target": { "iid": 12, "title": "" },
+    "target_url": "https://gitlab.com/acme/api/-/issues/12",
+    "body": "Pipeline failed",
+    "updated_at": "not a date"
+  }
+]

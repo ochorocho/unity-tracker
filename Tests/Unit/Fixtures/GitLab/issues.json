@@ -1,0 +1,10 @@
+[
+  {
+    "id": 601, "iid": 3, "title": "Footer links broken", "state": "opened",
+    "web_url": "https://git.example.com/acme/sub/website/-/issues/3",
+    "author": { "username": "bob" },
+    "labels": ["bug"],
+    "references": { "short": "#3", "relative": "#3", "full": "acme/sub/website#3" },
+    "updated_at": "2026-11-21T08:00:00Z"
+  }
+]

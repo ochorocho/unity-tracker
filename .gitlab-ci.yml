@@ -1,0 +1,50 @@
+# CI for gitlab-runner-ddev-executor: every job runs inside its own DDEV
+# project, so `ddev` is available directly and there is no `image:`.
+
+stages:
+    - test
+
+variables:
+    # Must match @playwright/test in package.json and .ddev/.env.playwright.
+    PLAYWRIGHT_DOCKER_IMAGE: 'mcr.microsoft.com/playwright:v1.65.1-noble'
+
+cgl:
+    stage: test
+    tags:
+        - ddev
+    script:
+        - ddev start
+        - ddev exec -d /var/www/html "composer run ci:php:lint"
+        - ddev exec -d /var/www/html "composer run ci:php:stan"
+        - ddev exec -d /var/www/html "composer run ci:php:cs"
+        - ddev exec -d /var/www/html "composer run ci:php:unit"
+        - ddev exec -d /var/www/html "composer run ci:composer:validate"
+
+# End-to-end: `ddev start` provisions TYPO3 (db + test); the specs drive the backend module.
+e2e:
+    stage: test
+    tags:
+        - ddev
+    script:
+        - ddev start
+        - ddev npm ci
+        - ddev playwright test
+    artifacts:
+        when: always
+        reports:
+            junit: test-results/junit.xml
+        paths:
+            - test-results/
+            - playwright-report/
+        expire_in: 1 week
+
+# Same suite on the lower end of the supported range.
+e2e-typo3-v13:
+    extends: e2e
+    variables:
+        TYPO3_VERSION: '^13.4'
+    script:
+        - ddev dotenv set .ddev/.env.web --typo3-version="${TYPO3_VERSION}"
+        - ddev start
+        - ddev npm ci
+        - ddev playwright test

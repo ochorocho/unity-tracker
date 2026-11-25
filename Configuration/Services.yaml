@@ -1,0 +1,39 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  Ochorocho\UnityTracker\:
+    resource: '../Classes/*'
+    exclude:
+      - '../Classes/Connection/Connection.php'
+      - '../Classes/Connection/InvalidHostException.php'
+      - '../Classes/Connection/Provider.php'
+      - '../Classes/Item/*'
+      - '../Classes/Provider/Payload.php'
+      - '../Classes/Provider/Query.php'
+      - '../Classes/Security/TokenDecryptionException.php'
+      - '../Classes/Service/FetchError.php'
+      - '../Classes/Service/FetchFailedException.php'
+      - '../Classes/Service/Overview.php'
+
+  Ochorocho\UnityTracker\Configuration\ExtensionSettings:
+    factory: ['Ochorocho\UnityTracker\Configuration\ExtensionSettings', 'fromExtensionConfiguration']
+
+  Ochorocho\UnityTracker\Security\TokenCipher:
+    factory: ['Ochorocho\UnityTracker\Security\TokenCipher', 'fromGlobals']
+
+  # Guzzle client with TYPO3's HTTP settings (proxy, verify, …)
+  unitytracker.http_client:
+    class: GuzzleHttp\ClientInterface
+    factory: ['@TYPO3\CMS\Core\Http\Client\GuzzleClientFactory', 'getClient']
+
+  Ochorocho\UnityTracker\Service\ItemFetcher:
+    arguments:
+      $client: '@unitytracker.http_client'
+
+  cache.unitytracker:
+    class: TYPO3\CMS\Core\Cache\Frontend\FrontendInterface
+    factory: ['@TYPO3\CMS\Core\Cache\CacheManager', 'getCache']
+    arguments: ['unitytracker']

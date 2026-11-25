@@ -1,0 +1,8 @@
+/Build/
+/playwright-report/
+/test-results/
+/node_modules/
+.php-cs-fixer.cache
+.phpunit.result.cache
+.mcp.json
+/Documentation-GENERATED-temp/

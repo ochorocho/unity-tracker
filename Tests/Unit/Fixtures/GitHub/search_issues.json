@@ -1,0 +1,14 @@
+{
+  "total_count": 1,
+  "incomplete_results": false,
+  "items": [
+    {
+      "number": 9, "title": "Crash on start", "state": "open",
+      "html_url": "https://ghe.example.com/acme/app/issues/9",
+      "repository_url": "https://ghe.example.com/api/v3/repos/acme/app",
+      "user": { "login": "hubot" },
+      "labels": [],
+      "updated_at": "2026-11-23T10:00:00Z"
+    }
+  ]
+}

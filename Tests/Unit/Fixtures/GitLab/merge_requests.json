@@ -1,0 +1,10 @@
+[
+  {
+    "id": 501, "iid": 15, "title": "Draft: Upgrade to TYPO3 v14", "state": "opened", "draft": true,
+    "web_url": "https://git.example.com/acme/website/-/merge_requests/15",
+    "author": { "username": "jane" },
+    "labels": ["upgrade"],
+    "references": { "short": "!15", "relative": "!15", "full": "acme/website!15" },
+    "updated_at": "2026-11-22T14:00:00.000+01:00"
+  }
+]

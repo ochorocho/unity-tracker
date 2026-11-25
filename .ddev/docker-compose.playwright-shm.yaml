@@ -1,0 +1,6 @@
+# Chromium keeps its renderer buffers in /dev/shm; Docker's 64 MB default
+# crashes heavy backend pages. Separate from docker-compose.playwright.yaml,
+# which the add-on regenerates.
+services:
+  playwright:
+    shm_size: 1gb

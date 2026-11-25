@@ -1,0 +1,20 @@
+[
+  {
+    "id": "1", "unread": true, "reason": "review_requested",
+    "updated_at": "2026-11-24T10:00:00Z",
+    "subject": { "title": "Fix login redirect", "url": "https://api.github.com/repos/acme/app/pulls/42", "type": "PullRequest" },
+    "repository": { "full_name": "acme/app", "html_url": "https://github.com/acme/app" }
+  },
+  {
+    "id": "2", "unread": true, "reason": "mention",
+    "updated_at": "2026-11-23T10:00:00Z",
+    "subject": { "title": "Crash on start", "url": "https://api.github.com/repos/acme/app/issues/9", "type": "Issue" },
+    "repository": { "full_name": "acme/app", "html_url": "https://github.com/acme/app" }
+  },
+  {
+    "id": "3", "unread": true, "reason": "subscribed",
+    "updated_at": "2026-11-22T10:00:00Z",
+    "subject": { "title": "v2.0.0", "url": "https://api.github.com/repos/acme/app/releases/123", "type": "Release" },
+    "repository": { "full_name": "acme/app", "html_url": "https://github.com/acme/app" }
+  }
+]

@@ -1,0 +1,50 @@
+{
+	"name": "ochorocho/unity-tracker",
+	"type": "typo3-cms-extension",
+	"description": "TYPO3 backend module: one overview of your GitLab and GitHub to-dos, review requests, merge/pull requests and issues",
+	"license": "GPL-2.0-or-later",
+	"authors": [
+		{
+			"name": "ochorocho",
+			"homepage": "https://github.com/ochorocho"
+		}
+	],
+	"autoload": {
+		"psr-4": {
+			"Ochorocho\\UnityTracker\\": "Classes/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Ochorocho\\UnityTracker\\Tests\\": "Tests/"
+		}
+	},
+	"extra": {
+		"typo3/cms": {
+			"extension-key": "unity_tracker"
+		}
+	},
+	"require": {
+		"php": "^8.2",
+		"ext-sodium": "*",
+		"guzzlehttp/guzzle": "^7.7 || ^8.0",
+		"typo3/cms-backend": "^13.4 || ^14.3",
+		"typo3/cms-core": "^13.4 || ^14.3",
+		"typo3/cms-fluid": "^13.4 || ^14.3"
+	},
+	"config": {
+		"sort-packages": true,
+		"allow-plugins": {
+			"typo3/class-alias-loader": true,
+			"typo3/cms-composer-installers": true
+		}
+	},
+	"scripts": {
+		"ci:php:lint": "find Classes Configuration Tests ext_localconf.php -name '*.php' -print0 | xargs -0 -n1 -P4 php -l > /dev/null",
+		"ci:php:stan": "Build/vendor/bin/phpstan analyse --no-progress",
+		"ci:php:cs": "Build/vendor/bin/php-cs-fixer fix --config=php-cs-fixer.php --dry-run --diff",
+		"ci:php:unit": "Build/vendor/bin/phpunit -c Tests/Unit/UnitTests.xml",
+		"ci:composer:validate": "@composer validate --no-check-publish",
+		"fix:php:cs": "Build/vendor/bin/php-cs-fixer fix --config=php-cs-fixer.php"
+	}
+}

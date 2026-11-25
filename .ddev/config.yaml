@@ -1,0 +1,28 @@
+name: unity-tracker
+type: typo3
+docroot: Build/public
+php_version: "8.4"
+webserver_type: nginx-fpm
+xdebug_enabled: false
+additional_hostnames: []
+additional_fqdns: []
+database:
+    type: mariadb
+    version: "11.8"
+hooks:
+    post-start:
+        - exec: bash /var/www/html/.ddev/scripts/setup-typo3.sh
+working_dir:
+    web: /var/www/html/Build
+use_dns_when_possible: true
+composer_version: "2"
+composer_root: "Build/"
+web_environment:
+    - TYPO3_DB_PASSWORD=db
+    - TYPO3_DB_HOST=db
+    - TYPO3_DB_DBNAME=db
+    - TYPO3_DB_DRIVER=mysqli
+    - TYPO3_DB_PORT=3306
+    - TYPO3_DB_USERNAME=db
+    - TYPO3_CONTEXT=Development
+corepack_enable: false
