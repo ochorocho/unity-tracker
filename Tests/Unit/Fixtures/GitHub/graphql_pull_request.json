@@ -22,7 +22,7 @@
         "title": "Fix login redirect",
         "state": "OPEN",
         "url": "https://github.com/acme/app/pull/42",
-        "body": "Fixes login",
+        "body": "Fixes login\r\n\r\n- [ ] Tests\r\n- [ ] Docs",
         "bodyHTML": "<p>Fixes login</p>",
         "createdAt": "2026-11-20T08:15:00Z",
         "author": {

@@ -464,6 +464,9 @@
 			<trans-unit id="item.error.reference" resname="item.error.reference">
 				<source>This item cannot be shown here.</source>
 			</trans-unit>
+			<trans-unit id="item.error.task" resname="item.error.task">
+				<source>This task is no longer in the text. Reload the sheet and try again.</source>
+			</trans-unit>
 			<trans-unit id="item.error.notAllowed" resname="item.error.notAllowed">
 				<source>You are not allowed to do that (any more). The details below are up to date.</source>
 			</trans-unit>
@@ -532,6 +535,9 @@
 			</trans-unit>
 			<trans-unit id="item.done.react" resname="item.done.react">
 				<source>Reaction updated.</source>
+			</trans-unit>
+			<trans-unit id="item.done.toggleTask" resname="item.done.toggleTask">
+				<source>Task list updated.</source>
 			</trans-unit>
 			<trans-unit id="item.done.deleteComment" resname="item.done.deleteComment">
 				<source>Comment deleted.</source>

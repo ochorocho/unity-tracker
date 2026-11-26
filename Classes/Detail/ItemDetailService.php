@@ -85,7 +85,11 @@ final readonly class ItemDetailService
         if (!$detail->allows($action)) {
             throw new InvalidActionException('notAllowed', 1764240402);
         }
-        $parameters = $this->parameters($detail, $action, $input);
+        if ($action === ItemAction::TOGGLE_TASK) {
+            [$action, $parameters] = $this->toggledTask($detail, $connection, $input);
+        } else {
+            $parameters = $this->parameters($detail, $action, $input);
+        }
 
         try {
             $response = $this->client->send($this->provider($connection)->actionRequest($detail, $action, $parameters, $connection), self::OPTIONS);
@@ -224,6 +228,31 @@ final readonly class ItemDetailService
             default:
                 return [];
         }
+    }
+
+    /**
+     * The edit that ticks a task list item, made on the Markdown just loaded.
+     *
+     * @param array<mixed> $input subject ("" = description, else a comment id), index, checked
+     * @return array{string, array<string, string>} action and its parameters
+     * @throws InvalidActionException
+     */
+    private function toggledTask(ItemDetail $detail, Connection $connection, array $input): array
+    {
+        $subject = is_string($input['subject'] ?? null) ? $input['subject'] : '';
+        $index = is_string($input['index'] ?? null) && ctype_digit($input['index']) ? (int)$input['index'] : -1;
+        $checked = ($input['checked'] ?? '') === '1';
+        $comment = $subject !== '' ? $detail->comment($subject) : null;
+        if ($subject === '' ? !$detail->allows(ItemAction::EDIT) : ($comment === null || !$comment['canEdit'])) {
+            throw new InvalidActionException('notAllowed', 1764240411);
+        }
+        $markdown = TaskList::toggle($comment['body'] ?? $detail->description, $index, $checked, $connection->provider === Provider::GitLab);
+        if ($markdown === null) {
+            throw new InvalidActionException('task', 1764240412);
+        }
+        return $comment === null
+            ? [ItemAction::EDIT, ['title' => $detail->title, 'description' => $markdown]]
+            : [ItemAction::EDIT_COMMENT, ['comment' => $comment['id'], 'body' => $markdown]];
     }
 
     /**

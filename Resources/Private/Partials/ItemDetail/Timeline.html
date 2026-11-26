@@ -67,7 +67,7 @@
                                     </form>
                                 </f:if>
                             </div>
-                            <div class="text-break" data-inline-view="comment-{comment.id}"><f:sanitize.html build="Ochorocho\UnityTracker\Detail\ProviderHtmlSanitizerBuilder">{comment.html}</f:sanitize.html></div>
+                            <div class="text-break" data-inline-view="comment-{comment.id}" data-task-scope><f:if condition="{comment.canEdit} && {can.toggleTask}"><f:render partial="ItemDetail/TaskForm" arguments="{detail: detail, actionUri: actionUri, subject: comment.id}" /></f:if><f:sanitize.html build="Ochorocho\UnityTracker\Detail\ProviderHtmlSanitizerBuilder">{comment.html}</f:sanitize.html></div>
                             <div data-inline-view="comment-{comment.id}">
                                 <f:render partial="ItemDetail/Reactions" arguments="{reactions: comment.reactions, subject: comment.id, canReact: comment.canReact, detail: detail, actionUri: actionUri, reactionChoices: reactionChoices}" />
                             </div>

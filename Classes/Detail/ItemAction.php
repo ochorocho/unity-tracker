@@ -36,11 +36,13 @@ final class ItemAction
     public const UNRESOLVE = 'unresolve';
     /** Toggles an emoji on the item or a comment, see Reactions */
     public const REACT = 'react';
+    /** Ticks a task list item of the description or a comment: sent as EDIT / EDIT_COMMENT */
+    public const TOGGLE_TASK = 'toggleTask';
 
     public const ALL = [
         self::COMMENT, self::EDIT, self::CLOSE, self::REOPEN, self::ASSIGN_ME, self::UNASSIGN_ME, self::ADD_LABEL,
         self::REMOVE_LABEL, self::APPROVE, self::UNAPPROVE, self::REQUEST_CHANGES, self::MERGE, self::MARK_DONE,
-        self::EDIT_COMMENT, self::DELETE_COMMENT, self::REPLY, self::RESOLVE, self::UNRESOLVE, self::REACT,
+        self::EDIT_COMMENT, self::DELETE_COMMENT, self::REPLY, self::RESOLVE, self::UNRESOLVE, self::REACT, self::TOGGLE_TASK,
     ];
 
     public const MAX_COMMENT = 65536;

@@ -11,6 +11,7 @@ import '@ochorocho/unity-tracker/markdown-editor.js';
  * - forms [data-item-form] are sent in the background; the answer's HTML replaces [data-item-body],
  * - inline editing: [data-inline-start=key] swaps [data-inline-view=key] for [data-inline-field=key],
  * - [data-load-older] puts an older page of the timeline in front of [data-timeline],
+ * - a task list checkbox [data-task-index] sends the [data-task-form] of its [data-task-scope],
  * - after a change the overview is told, it reloads once the sheet is closed.
  */
 const root = document.querySelector('[data-item-detail]');
@@ -122,6 +123,25 @@ if (root) {
     } else if (cancel) {
       setEditing(cancel.dataset.inlineCancel, false);
     }
+  });
+
+  root.addEventListener('change', (event) => {
+    const checkbox = event.target.closest('input[data-task-index]');
+    const scope = checkbox?.closest('[data-task-scope]');
+    const form = scope?.querySelector('[data-task-form]');
+    if (!form) {
+      return;
+    }
+    form.elements.index.value = checkbox.dataset.taskIndex;
+    form.elements.checked.value = checkbox.checked ? '1' : '';
+    // One change at a time: the answer re-renders the text with the new state.
+    scope.querySelectorAll('input[data-task-index]').forEach((input) => { input.disabled = true; });
+    submitInBackground(form).finally(() => {
+      if (checkbox.isConnected) {
+        checkbox.checked = !checkbox.checked;
+        scope.querySelectorAll('input[data-task-index]').forEach((input) => { input.disabled = false; });
+      }
+    });
   });
 
   root.addEventListener('submit', (event) => {

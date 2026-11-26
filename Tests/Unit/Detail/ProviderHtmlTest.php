@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace Ochorocho\UnityTracker\Tests\Unit\Detail;
 
 use Ochorocho\UnityTracker\Detail\ProviderHtml;
+use Ochorocho\UnityTracker\Detail\ProviderHtmlSanitizerBuilder;
 use PHPUnit\Framework\Attributes\Test;
 use TYPO3\TestingFramework\Core\Unit\UnitTestCase;
 
@@ -65,6 +66,25 @@ final class ProviderHtmlTest extends UnitTestCase
             . '<li> Text</li>',
             $this->subject->prepare($html, 'gitlab.com', $this->proxy(...))
         );
+    }
+
+    #[Test]
+    public function editableTaskListCheckboxesAreNumberedAndSurviveTheSanitiser(): void
+    {
+        $html = '<li><input type="checkbox" class="task-list-item-checkbox" disabled> A</li>'
+            . '<li><input type="checkbox" class="task-list-item-checkbox" data-inapplicable disabled> B</li>'
+            . '<li><input type="checkbox" checked disabled> C</li>';
+
+        $prepared = $this->subject->prepare($html, 'gitlab.com', $this->proxy(...), editableTasks: true);
+        self::assertSame(
+            '<li><input type="checkbox" data-task-index="0"> A</li>'
+            . '<li><input type="checkbox" disabled> B</li>'
+            . '<li><input type="checkbox" data-task-index="2" checked> C</li>',
+            $prepared
+        );
+        $this->resetSingletonInstances = true;
+        $sanitized = (new ProviderHtmlSanitizerBuilder())->build()->sanitize($prepared);
+        self::assertStringContainsString('<input type="checkbox" data-task-index="2" checked>', $sanitized);
     }
 
     #[Test]

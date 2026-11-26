@@ -266,7 +266,12 @@ final readonly class ItemController
             'provider' => $connection->provider->label(),
             'actionUri' => $this->context->uri('itemAction'),
             'activityUri' => $this->context->uri('itemActivity', $detail->reference->toArray()),
-            'description' => $this->providerHtml->prepare($detail->descriptionHtml, $connection->host, $this->imageUrl($connection)),
+            'description' => $this->providerHtml->prepare(
+                $detail->descriptionHtml,
+                $connection->host,
+                $this->imageUrl($connection),
+                $detail->allows(ItemAction::TOGGLE_TASK) && $detail->allows(ItemAction::EDIT)
+            ),
             'timeline' => $this->timeline($detail, $connection),
             'can' => array_fill_keys($detail->actions, true),
             'reactionChoices' => Reactions::CHOICES,
@@ -280,10 +285,13 @@ final readonly class ItemController
      */
     private function timeline(ItemDetail $detail, Connection $connection): array
     {
-        $prepare = fn(string $html): string => $this->providerHtml->prepare($html, $connection->host, $this->imageUrl($connection));
+        $prepare = fn(string $html, bool $editable = false): string => $this->providerHtml->prepare($html, $connection->host, $this->imageUrl($connection), $editable);
         return array_map(static fn(array $entry): array => array_merge($entry, [
             'html' => $prepare($entry['html']),
-            'comments' => array_map(static fn(array $comment): array => array_merge($comment, ['html' => $prepare($comment['html'])]), $entry['comments']),
+            'comments' => array_map(
+                static fn(array $comment): array => array_merge($comment, ['html' => $prepare($comment['html'], $comment['canEdit'])]),
+                $entry['comments']
+            ),
         ]), $detail->timeline);
     }
 

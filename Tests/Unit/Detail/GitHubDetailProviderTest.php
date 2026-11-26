@@ -61,7 +61,7 @@ final class GitHubDetailProviderTest extends UnitTestCase
             ItemAction::COMMENT, ItemAction::EDIT, ItemAction::CLOSE, ItemAction::UNASSIGN_ME, ItemAction::ADD_LABEL,
             ItemAction::REMOVE_LABEL, ItemAction::APPROVE, ItemAction::REQUEST_CHANGES, ItemAction::MERGE, ItemAction::MARK_DONE,
             ItemAction::EDIT_COMMENT, ItemAction::DELETE_COMMENT, ItemAction::REPLY, ItemAction::RESOLVE, ItemAction::UNRESOLVE,
-            ItemAction::REACT,
+            ItemAction::REACT, ItemAction::TOGGLE_TASK,
         ], $detail->actions);
         self::assertSame(['9001', 'review-8001', 'review-8002', '9002'], array_column($detail->comments(), 'id'));
         self::assertFalse($detail->comment('9001')['canEdit'] ?? true);

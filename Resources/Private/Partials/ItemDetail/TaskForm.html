@@ -1,0 +1,16 @@
+<html
+    xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+    data-namespace-typo3-fluid="true"
+>
+<f:comment>
+    Sent by item-detail.js when a task list checkbox of the surrounding [data-task-scope] changes.
+    Arguments: detail, actionUri, subject ("" = description, else the comment id).
+</f:comment>
+<form method="post" action="{actionUri}" data-item-form data-task-form hidden>
+    <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+    <input type="hidden" name="action" value="toggleTask" />
+    <input type="hidden" name="subject" value="{subject}" />
+    <input type="hidden" name="index" value="" />
+    <input type="hidden" name="checked" value="" />
+</form>
+</html>

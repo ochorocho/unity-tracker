@@ -92,7 +92,7 @@ final class FakeGitLab
         $state = GeneralUtility::makeInstance(Registry::class)->get(self::NAMESPACE, 'state');
         return is_array($state) ? $state : [
             'title' => 'Fix login redirect',
-            'description' => 'Fixes the **login** redirect.',
+            'description' => "Fixes the **login** redirect.\n\n- [x] Tests\n- [ ] Docs",
             'discussions' => [
                 ['id' => 'a1', 'resolvable' => false, 'resolved' => false, 'notes' => [['id' => 101, 'author' => 'jane', 'body' => 'Please add a test.']]],
                 ['id' => 'b2', 'resolvable' => false, 'resolved' => false, 'notes' => [['id' => 102, 'author' => 'tester', 'body' => 'Will do.']]],
@@ -205,10 +205,7 @@ final class FakeGitLab
                     // GitLab lazy-loads images: a placeholder in src, the image in data-src.
                     'descriptionHtml' => $this->markdown($state['description'])
                         . '<p><img class="lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="'
-                        . ' data-src="/acme/app/uploads/0123456789abcdef0123456789abcdef/shot.png" alt="Screenshot"></p>'
-                        . '<ul class="task-list" dir="auto"><li class="task-list-item"><input type="checkbox" data-checkbox-sourcepos="3:4-3:4"'
-                        . ' class="task-list-item-checkbox" checked disabled aria-label="Check option: Tests"> Tests</li>'
-                        . '<li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled aria-label="Check option: Docs"> Docs</li></ul>',
+                        . ' data-src="/acme/app/uploads/0123456789abcdef0123456789abcdef/shot.png" alt="Screenshot"></p>',
                     'createdAt' => '2026-11-20T08:15:00Z',
                     'author' => ['username' => 'jane'],
                     'labels' => ['nodes' => [['title' => 'bug', 'color' => '#d9534f']]],
@@ -306,11 +303,25 @@ final class FakeGitLab
     }
 
     /**
-     * Just enough Markdown for the specs: paragraphs and **bold**.
+     * Just enough Markdown for the specs: paragraphs, **bold** and task lists (rendered like GitLab does).
      */
     private function markdown(string $text): string
     {
-        $html = htmlspecialchars($text, ENT_QUOTES);
-        return '<p>' . preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $html) . '</p>';
+        $html = '';
+        foreach (preg_split('/\n{2,}/', trim($text)) ?: [] as $block) {
+            $lines = explode("\n", $block);
+            if (preg_match_all('/^- \[([ x])\] (.*)$/m', $block, $tasks, PREG_SET_ORDER) === count($lines)) {
+                $html .= '<ul class="task-list" dir="auto">';
+                foreach ($tasks as [, $state, $label]) {
+                    $label = htmlspecialchars($label, ENT_QUOTES);
+                    $html .= '<li class="task-list-item"><input type="checkbox" data-checkbox-sourcepos="1:4-1:4" class="task-list-item-checkbox"'
+                        . ($state === 'x' ? ' checked' : '') . ' disabled aria-label="Check option: ' . $label . '"> ' . $label . '</li>';
+                }
+                $html .= '</ul>';
+                continue;
+            }
+            $html .= '<p>' . preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', htmlspecialchars($block, ENT_QUOTES)) . '</p>';
+        }
+        return $html;
     }
 }

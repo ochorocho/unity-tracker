@@ -83,7 +83,6 @@ test.describe('Detail sheet editing', () => {
 
     await expect(description.getByRole('checkbox', { name: 'Check option: Tests' })).toBeChecked();
     await expect(description.getByRole('checkbox', { name: 'Check option: Docs' })).not.toBeChecked();
-    await expect(description.getByRole('checkbox', { name: 'Check option: Docs' })).toBeDisabled();
     await expect(description).not.toContainText('<input');
   });
 
@@ -160,7 +159,7 @@ test.describe('Detail sheet editing', () => {
     await expect(title).toBeFocused();
     await title.fill('Fix the login redirect');
     const description = sheet.locator('[data-item-description] textarea');
-    await expect(description).toHaveValue('Fixes the **login** redirect.');
+    await expect(description).toHaveValue('Fixes the **login** redirect.\n\n- [x] Tests\n- [ ] Docs');
     await description.fill('Fixes the **login** redirect, with a test.');
     await sheet.locator('[data-item-description]').getByRole('button', { name: 'Save' }).click();
 

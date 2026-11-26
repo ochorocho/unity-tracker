@@ -58,7 +58,7 @@ final class GitLabDetailProviderTest extends UnitTestCase
         self::assertSame([
             ItemAction::COMMENT, ItemAction::EDIT, ItemAction::CLOSE, ItemAction::ASSIGN_ME, ItemAction::ADD_LABEL,
             ItemAction::REMOVE_LABEL, ItemAction::APPROVE, ItemAction::MERGE, ItemAction::MARK_DONE, ItemAction::EDIT_COMMENT,
-            ItemAction::DELETE_COMMENT, ItemAction::REPLY, ItemAction::RESOLVE, ItemAction::UNRESOLVE, ItemAction::REACT,
+            ItemAction::DELETE_COMMENT, ItemAction::REPLY, ItemAction::RESOLVE, ItemAction::UNRESOLVE, ItemAction::REACT, ItemAction::TOGGLE_TASK,
         ], $detail->actions);
     }
 

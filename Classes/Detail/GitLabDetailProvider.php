@@ -280,6 +280,7 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
         $allow($detail->anyTimeline('canReply'), ItemAction::REPLY);
         $allow($detail->anyTimeline('canResolve'), ItemAction::RESOLVE, ItemAction::UNRESOLVE);
         $allow($detail->canReact || $detail->anyTimeline('canReact'), ItemAction::REACT);
+        $allow(in_array(ItemAction::EDIT, $actions, true) || $detail->anyTimeline('canEdit'), ItemAction::TOGGLE_TASK);
 
         return $detail->withActions($actions);
     }

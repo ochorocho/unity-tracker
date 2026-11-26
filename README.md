@@ -42,6 +42,7 @@ The sheet offers only what the API says the token's user may do, and checks it a
 | Reply to a thread | discussions | review threads |
 | Resolve / unresolve a thread | resolvable discussions | review threads |
 | React (👍 👎 😄 🎉 😕 ❤️ 🚀 👀) to the item and comments | award emoji (others already set can be toggled) | reactions |
+| Tick task list items in the description and own comments | ✓ (not `[~]`) | ✓ |
 
 The activity reads like on the provider: comments, threads (GitLab discussions incl. diff threads, GitHub
 review threads, with file and line) and events (GitLab system notes; GitHub labels, assignees, commits,

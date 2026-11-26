@@ -38,6 +38,9 @@ final class ItemDetailServiceTest extends UnitTestCase
     /** @var list<array<mixed>> decoded bodies of the GraphQL requests */
     private array $graphql = [];
 
+    /** @var list<mixed> decoded body of every request */
+    private array $bodies = [];
+
     /** @var list<array<mixed>> decoded bodies of the GraphQL mutations */
     private array $mutations = [];
 
@@ -195,6 +198,36 @@ final class ItemDetailServiceTest extends UnitTestCase
     }
 
     #[Test]
+    public function taskOfTheDescriptionIsTickedThroughAnEdit(): void
+    {
+        $this->subject()->perform($this->reference(), Fixture::connection(Provider::GitHub), ItemAction::TOGGLE_TASK, ['subject' => '', 'index' => '1', 'checked' => '1']);
+
+        self::assertSame('PATCH https://api.github.com/repos/acme/app/issues/42', $this->sent[1]);
+        self::assertSame(['title' => 'Fix login redirect', 'body' => "Fixes login\r\n\r\n- [ ] Tests\r\n- [x] Docs"], $this->bodies[1]);
+    }
+
+    #[Test]
+    public function taskThatIsNotInTheTextIsNotSent(): void
+    {
+        $this->expectException(InvalidActionException::class);
+        $this->expectExceptionMessage('task');
+        try {
+            // Comment 9002 ("Fixed") has no task list.
+            $this->subject()->perform($this->reference(), Fixture::connection(Provider::GitHub), ItemAction::TOGGLE_TASK, ['subject' => '9002', 'index' => '0', 'checked' => '1']);
+        } finally {
+            self::assertCount(1, $this->sent);
+        }
+    }
+
+    #[Test]
+    public function taskOfSomebodyElsesCommentCannotBeTicked(): void
+    {
+        $this->expectException(InvalidActionException::class);
+        $this->expectExceptionMessage('notAllowed');
+        $this->subject()->perform($this->reference(), Fixture::connection(Provider::GitHub), ItemAction::TOGGLE_TASK, ['subject' => '9001', 'index' => '0', 'checked' => '1']);
+    }
+
+    #[Test]
     public function apiMessageIsPartOfTheError(): void
     {
         $this->actionResponse = new Response(405, [], '{"message": "Pull Request is not mergeable"}');
@@ -217,6 +250,7 @@ final class ItemDetailServiceTest extends UnitTestCase
         $handler = function (RequestInterface $request): PromiseInterface {
             $this->sent[] = $request->getMethod() . ' ' . $request->getUri();
             $body = json_decode((string)$request->getBody(), true);
+            $this->bodies[] = $body;
             if (str_ends_with((string)$request->getUri(), '/graphql') && !str_starts_with($body['query'] ?? '', 'mutation')) {
                 $this->graphql[] = $body;
                 return Create::promiseFor(new Response(200, ['X-OAuth-Scopes' => 'repo'], Fixture::json('GitHub/graphql_pull_request.json')));

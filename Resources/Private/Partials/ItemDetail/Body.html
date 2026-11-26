@@ -110,7 +110,8 @@
 
 <section class="mb-4" data-item-description>
     <h2 class="h4"><f:translate key="item.description" extensionName="UnityTracker" /></h2>
-    <div data-inline-view="edit">
+    <div data-inline-view="edit" data-task-scope>
+        <f:if condition="{can.edit} && {can.toggleTask}"><f:render partial="ItemDetail/TaskForm" arguments="{detail: detail, actionUri: actionUri, subject: ''}" /></f:if>
         <f:if condition="{description}">
             <f:then><div class="text-break"><f:sanitize.html build="Ochorocho\UnityTracker\Detail\ProviderHtmlSanitizerBuilder">{description}</f:sanitize.html></div></f:then>
             <f:else><p><f:translate key="item.noDescription" extensionName="UnityTracker" /></p></f:else>
