@@ -23,7 +23,7 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
     public const WRITE_SCOPE = 'api';
 
     private const COMMON_FIELDS = <<<'GRAPHQL'
-        title state webUrl description descriptionHtml createdAt
+        id title state webUrl description descriptionHtml createdAt
         author { username }
         labels(first: 50) { nodes { title color } }
         assignees(first: 20) { nodes { id username } }
@@ -34,7 +34,8 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
             notes { nodes {
               id body bodyHtml createdAt system url author { username }
               position { filePath newLine oldLine }
-              userPermissions { adminNote }
+              awardEmoji { nodes { name emoji user { username } } }
+              userPermissions { adminNote awardEmoji }
             } }
           }
         }
@@ -47,7 +48,7 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
             labels(first: 100, includeAncestorGroups: true) { nodes { title color } }
             target: issue(iid: $iid) {
               %s
-              userPermissions { updateIssue createNote reopenIssue adminIssue }
+              userPermissions { readIssue updateIssue createNote reopenIssue adminIssue }
             }
           }
         }
@@ -62,7 +63,8 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
               %s
               draft sourceBranch targetBranch detailedMergeStatus mergeable
               approvedBy(first: 50) { nodes { username } }
-              userPermissions { updateMergeRequest createNote canMerge canApprove adminMergeRequest }
+              awardEmoji { nodes { name emoji user { username } } }
+              userPermissions { readMergeRequest updateMergeRequest createNote canMerge canApprove adminMergeRequest }
             }
           }
         }
@@ -71,6 +73,12 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
     private const RESOLVE_MUTATION = <<<'GRAPHQL'
         mutation($id: DiscussionID!, $resolve: Boolean!) {
           discussionToggleResolve(input: {id: $id, resolve: $resolve}) { errors }
+        }
+        GRAPHQL;
+
+    private const AWARD_MUTATION = <<<'GRAPHQL'
+        mutation($id: AwardableID!, $name: String!) {
+          awardEmojiToggle(input: {awardableId: $id, name: $name}) { errors }
         }
         GRAPHQL;
 
@@ -83,7 +91,7 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
     public function detailRequests(ItemReference $reference, Connection $connection, string $before = ''): array
     {
         $query = sprintf($reference->isChange() ? self::MERGE_REQUEST_QUERY : self::ISSUE_QUERY, self::COMMON_FIELDS);
-        return [
+        $requests = [
             'detail' => new Request('POST', $connection->graphqlUrl(), [
                 'Authorization' => 'Bearer ' . $connection->token,
                 'Content-Type' => 'application/json',
@@ -95,6 +103,11 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
             // Which scopes the token has (GitLab 15.5+); without "api" the sheet is read-only.
             'scopes' => $this->rest($connection, 'GET', '/personal_access_tokens/self'),
         ];
+        if (!$reference->isChange()) {
+            // The GraphQL type Issue has no awardEmoji field.
+            $requests['awards'] = $this->rest($connection, 'GET', '/projects/' . rawurlencode($reference->project) . '/issues/' . $reference->number . '/award_emoji?per_page=100');
+        }
+        return $requests;
     }
 
     public function parseDetail(ItemReference $reference, array $responses, string $before = ''): ItemDetail
@@ -116,6 +129,10 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
             default => ItemDetail::STATE_OPEN,
         };
 
+        $awards = $reference->isChange()
+            ? Payload::list($target, 'awardEmoji', 'nodes')
+            : Payload::list(Responses::json($responses['awards'] ?? null) ?? []);
+
         $detail = new ItemDetail(
             $reference,
             Payload::string($target, 'title'),
@@ -130,7 +147,7 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
                 'id' => (string)(int)substr((string)strrchr(Payload::string($user, 'id'), '/'), 1),
                 'name' => Payload::string($user, 'username'),
             ], Payload::list($target, 'assignees', 'nodes')),
-            $this->timeline(Payload::list($target, 'discussions', 'nodes'), Payload::bool($permissions, 'createNote')),
+            $this->timeline(Payload::list($target, 'discussions', 'nodes'), Payload::bool($permissions, 'createNote'), $viewer['name']),
             $this->labels(Payload::list($payload, 'data', 'project', 'labels', 'nodes')),
             $viewer,
             [],
@@ -143,6 +160,9 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
             olderCursor: Payload::bool($target, 'discussions', 'pageInfo', 'hasPreviousPage')
                 ? Payload::string($target, 'discussions', 'pageInfo', 'startCursor')
                 : '',
+            reactions: $this->reactions($awards, $viewer['name']),
+            subject: $this->awardable(Payload::string($target, 'id')),
+            canReact: Payload::bool($permissions, $reference->isChange() ? 'readMergeRequest' : 'readIssue'),
         );
         $detail = $this->withActions($detail, $permissions, Payload::bool($target, 'mergeable'));
 
@@ -180,6 +200,8 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
                 'id' => 'gid://gitlab/Discussion/' . $parameters['thread'],
                 'resolve' => $action === ItemAction::RESOLVE,
             ]),
+            // Toggles: perform() has checked the current state already.
+            ItemAction::REACT => $this->graphql($connection, self::AWARD_MUTATION, ['id' => $parameters['subject'], 'name' => $parameters['emoji']]),
             default => throw new \InvalidArgumentException('Unsupported action ' . $action, 1764240102),
         };
     }
@@ -257,6 +279,7 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
         $allow($detail->anyTimeline('canDelete'), ItemAction::DELETE_COMMENT);
         $allow($detail->anyTimeline('canReply'), ItemAction::REPLY);
         $allow($detail->anyTimeline('canResolve'), ItemAction::RESOLVE, ItemAction::UNRESOLVE);
+        $allow($detail->canReact || $detail->anyTimeline('canReact'), ItemAction::REACT);
 
         return $detail->withActions($actions);
     }
@@ -280,7 +303,7 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
      * @param list<array<mixed>> $discussions
      * @return list<array<string, mixed>>
      */
-    private function timeline(array $discussions, bool $canComment): array
+    private function timeline(array $discussions, bool $canComment, string $viewer): array
     {
         $timeline = [];
         foreach ($discussions as $discussion) {
@@ -310,6 +333,9 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
                 Payload::string($note, 'bodyHtml'),
                 Payload::bool($note, 'userPermissions', 'adminNote'),
                 Payload::bool($note, 'userPermissions', 'adminNote'),
+                $this->reactions(Payload::list($note, 'awardEmoji', 'nodes'), $viewer),
+                $this->awardable(Payload::string($note, 'id')),
+                Payload::bool($note, 'userPermissions', 'awardEmoji'),
             ), $notes), [
                 'resolvable' => $resolvable,
                 'resolved' => Payload::bool($discussion, 'resolved'),
@@ -322,6 +348,29 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
             ]);
         }
         return $timeline;
+    }
+
+    /**
+     * Award emoji of GraphQL ("user": {"username"}) and REST (the same, no "emoji").
+     *
+     * @param list<array<mixed>> $awards
+     * @return list<array{name: string, emoji: string, count: int, reacted: bool}>
+     */
+    private function reactions(array $awards, string $viewer): array
+    {
+        return Reactions::fromAwards(array_map(static fn(array $award): array => [
+            'name' => Payload::string($award, 'name'),
+            'emoji' => Payload::string($award, 'emoji'),
+            'user' => Payload::string($award, 'user', 'username'),
+        ], $awards), $viewer);
+    }
+
+    /**
+     * A global id that can go into AwardableID ("gid://gitlab/Note/12"), "" for anything else.
+     */
+    private function awardable(string $id): string
+    {
+        return preg_match('#^gid://gitlab/[A-Za-z:]+/\d+$#', $id) === 1 ? $id : '';
     }
 
     private function date(string $value): ?\DateTimeImmutable

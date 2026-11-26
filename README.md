@@ -41,6 +41,7 @@ The sheet offers only what the API says the token's user may do, and checks it a
 | Edit / delete own comments | ✓ | ✓ (submitted reviews: edit only) |
 | Reply to a thread | discussions | review threads |
 | Resolve / unresolve a thread | resolvable discussions | review threads |
+| React (👍 👎 😄 🎉 😕 ❤️ 🚀 👀) to the item and comments | award emoji (others already set can be toggled) | reactions |
 
 The activity reads like on the provider: comments, threads (GitLab discussions incl. diff threads, GitHub
 review threads, with file and line) and events (GitLab system notes; GitHub labels, assignees, commits,
@@ -50,6 +51,7 @@ Details come from one GraphQL query per item (rendered HTML and the user's permi
 use the REST API. Actions run in the background: the sheet updates in place, the overview reloads
 when the sheet is closed. Title, description and your own comments are edited inline. GitHub threads
 are resolved through GraphQL mutations (no REST endpoint), GitLab threads through `discussionToggleResolve`.
+Reactions are GraphQL mutations as well (`awardEmojiToggle`, `addReaction`/`removeReaction`).
 
 Images in descriptions and comments are loaded by TYPO3 and served from the backend (route
 `itemImage`): the backend's Content-Security-Policy blocks other origins, and uploads of non-public

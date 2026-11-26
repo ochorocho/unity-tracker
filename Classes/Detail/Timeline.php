@@ -15,7 +15,11 @@ namespace Ochorocho\UnityTracker\Detail;
  *   GitHub as structured data: `event` is the label key suffix `item.event.*`, `subject` its argument.
  * - thread: comments that belong together. A plain comment is a thread with one comment.
  *
- * @phpstan-type Comment array{id: string, kind: string, number: int, author: string, createdAt: ?\DateTimeImmutable, html: string, body: string, canEdit: bool, canDelete: bool}
+ * Comments carry their reactions; `subject` is the provider's id to react with (GitLab award-emoji
+ * awardable id, GitHub node id).
+ *
+ * @phpstan-import-type Reaction from Reactions
+ * @phpstan-type Comment array{id: string, kind: string, number: int, author: string, createdAt: ?\DateTimeImmutable, html: string, body: string, canEdit: bool, canDelete: bool, reactions: list<Reaction>, subject: string, canReact: bool}
  * @phpstan-type Entry array{type: string, id: string, author: string, createdAt: ?\DateTimeImmutable, event: string, subject: string, html: string, review: string, resolvable: bool, resolved: bool, canReply: bool, canResolve: bool, replyTo: string, path: string, line: int, url: string, comments: list<Comment>}
  */
 final class Timeline
@@ -44,6 +48,7 @@ final class Timeline
 
     /**
      * @param string $kind what the provider needs to edit/delete it (GitLab "note", GitHub "issue", "review", "pullReview")
+     * @param list<Reaction> $reactions
      * @return Comment
      */
     public static function comment(
@@ -55,6 +60,9 @@ final class Timeline
         string $html,
         bool $canEdit,
         bool $canDelete,
+        array $reactions = [],
+        string $subject = '',
+        bool $canReact = false,
     ): array {
         return [
             // GitLab notes keep their plain id, GitHub ids are only unique per kind.
@@ -67,6 +75,9 @@ final class Timeline
             'body' => $body,
             'canEdit' => $canEdit,
             'canDelete' => $canDelete,
+            'reactions' => $reactions,
+            'subject' => $subject,
+            'canReact' => $canReact && $subject !== '',
         ];
     }
 

@@ -34,11 +34,13 @@ final class ItemAction
     public const REPLY = 'reply';
     public const RESOLVE = 'resolve';
     public const UNRESOLVE = 'unresolve';
+    /** Toggles an emoji on the item or a comment, see Reactions */
+    public const REACT = 'react';
 
     public const ALL = [
         self::COMMENT, self::EDIT, self::CLOSE, self::REOPEN, self::ASSIGN_ME, self::UNASSIGN_ME, self::ADD_LABEL,
         self::REMOVE_LABEL, self::APPROVE, self::UNAPPROVE, self::REQUEST_CHANGES, self::MERGE, self::MARK_DONE,
-        self::EDIT_COMMENT, self::DELETE_COMMENT, self::REPLY, self::RESOLVE, self::UNRESOLVE,
+        self::EDIT_COMMENT, self::DELETE_COMMENT, self::REPLY, self::RESOLVE, self::UNRESOLVE, self::REACT,
     ];
 
     public const MAX_COMMENT = 65536;

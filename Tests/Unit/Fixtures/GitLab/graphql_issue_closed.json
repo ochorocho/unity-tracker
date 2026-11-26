@@ -1,20 +1,49 @@
 {
   "data": {
-    "currentUser": { "id": "gid://gitlab/User/42", "username": "me" },
+    "currentUser": {
+      "id": "gid://gitlab/User/42",
+      "username": "me"
+    },
     "project": {
-      "labels": { "nodes": [] },
+      "labels": {
+        "nodes": []
+      },
       "target": {
+        "id": "gid://gitlab/Issue/3456",
         "title": "Crash on start",
         "state": "closed",
         "webUrl": "https://gitlab.com/acme/app/-/issues/9",
         "description": "",
         "descriptionHtml": "",
         "createdAt": "2026-11-01T08:00:00Z",
-        "author": { "username": "joe" },
-        "labels": { "nodes": [] },
-        "assignees": { "nodes": [{ "id": "gid://gitlab/User/42", "username": "me" }] },
-        "discussions": { "pageInfo": { "hasPreviousPage": false, "startCursor": null }, "nodes": [] },
-        "userPermissions": { "updateIssue": false, "createNote": true, "reopenIssue": true, "adminIssue": false }
+        "author": {
+          "username": "joe"
+        },
+        "labels": {
+          "nodes": []
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "id": "gid://gitlab/User/42",
+              "username": "me"
+            }
+          ]
+        },
+        "discussions": {
+          "pageInfo": {
+            "hasPreviousPage": false,
+            "startCursor": null
+          },
+          "nodes": []
+        },
+        "userPermissions": {
+          "readIssue": true,
+          "updateIssue": false,
+          "createNote": true,
+          "reopenIssue": true,
+          "adminIssue": false
+        }
       }
     }
   }

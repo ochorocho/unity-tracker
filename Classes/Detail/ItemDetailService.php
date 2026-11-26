@@ -195,6 +195,15 @@ final readonly class ItemDetailService
                 }
                 $parameters = ['thread' => $thread['id'], 'replyTo' => $thread['replyTo']];
                 return $action === ItemAction::REPLY ? $parameters + ['body' => $this->body($text('body'))] : $parameters;
+            case ItemAction::REACT:
+                $target = $detail->reactionTarget($text('subject'));
+                $emoji = $text('emoji');
+                $current = array_column($target['reactions'] ?? [], null, 'name');
+                // The eight choices, or one the subject has already (GitLab allows any emoji).
+                if ($target === null || !Reactions::isName($emoji) || (!isset(Reactions::CHOICES[$emoji]) && !isset($current[$emoji]))) {
+                    throw new InvalidActionException('notAllowed', 1764240410);
+                }
+                return ['subject' => $target['subject'], 'emoji' => $emoji, 'remove' => ($current[$emoji]['reacted'] ?? false) ? '1' : ''];
             case ItemAction::APPROVE:
                 return ['body' => mb_substr($text('body'), 0, ItemAction::MAX_COMMENT)];
             case ItemAction::EDIT:

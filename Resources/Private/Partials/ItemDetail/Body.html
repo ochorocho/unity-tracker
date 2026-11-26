@@ -116,6 +116,7 @@
             <f:else><p><f:translate key="item.noDescription" extensionName="UnityTracker" /></p></f:else>
         </f:if>
     </div>
+    <f:render partial="ItemDetail/Reactions" arguments="{reactions: detail.reactions, subject: '', canReact: detail.canReact, detail: detail, actionUri: actionUri, reactionChoices: reactionChoices}" />
     <f:if condition="{can.edit}">
         <div data-inline-field="edit" hidden>
             <unity-tracker-markdown-editor class="d-block mb-2" name="description" form="unitytracker-edit-form" rows="12"

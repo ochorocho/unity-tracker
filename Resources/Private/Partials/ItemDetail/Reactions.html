@@ -1,0 +1,42 @@
+<html
+    xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+    data-namespace-typo3-fluid="true"
+>
+<f:comment>
+    Reaction bar of the item (subject "") or a comment (subject = comment id): a click toggles the emoji.
+    Arguments: reactions, subject, canReact, detail, actionUri, reactionChoices.
+</f:comment>
+<f:if condition="{reactions} || {canReact}">
+    <form method="post" action="{actionUri}" class="d-flex flex-wrap align-items-center gap-1 mt-2" data-item-form data-reactions="{subject}">
+        <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+        <input type="hidden" name="action" value="react" />
+        <input type="hidden" name="subject" value="{subject}" />
+        <f:for each="{reactions}" as="reaction">
+            <f:if condition="{canReact}">
+                <f:then>
+                    <button class="btn btn-sm {f:if(condition: reaction.reacted, then: 'btn-primary', else: 'btn-default')}" name="emoji" value="{reaction.name}"
+                        aria-pressed="{f:if(condition: reaction.reacted, then: 'true', else: 'false')}" title=":{reaction.name}:"
+                        aria-label="{f:translate(key: 'item.reaction', extensionName: 'UnityTracker', arguments: {0: reaction.name, 1: reaction.count})}"
+                        data-reaction="{reaction.name}">{reaction.emoji} {reaction.count}</button>
+                </f:then>
+                <f:else>
+                    <span class="badge badge-default" title=":{reaction.name}:" data-reaction="{reaction.name}"
+                        aria-label="{f:translate(key: 'item.reaction', extensionName: 'UnityTracker', arguments: {0: reaction.name, 1: reaction.count})}">{reaction.emoji} {reaction.count}</span>
+                </f:else>
+            </f:if>
+        </f:for>
+        <f:if condition="{canReact}">
+            <details style="position: relative">
+                <summary class="btn btn-default btn-sm" aria-label="{f:translate(key: 'item.action.addReaction', extensionName: 'UnityTracker')}"
+                    title="{f:translate(key: 'item.action.addReaction', extensionName: 'UnityTracker')}">☺︎+</summary>
+                <div class="card p-1 d-flex flex-row gap-1" style="position: absolute; z-index: 10; top: 100%; left: 0; margin-top: .25rem">
+                    <f:for each="{reactionChoices}" key="name" as="emoji">
+                        <button class="btn btn-default btn-sm" name="emoji" value="{name}" title=":{name}:"
+                            aria-label="{f:translate(key: 'item.action.react', extensionName: 'UnityTracker', arguments: {0: name})}">{emoji}</button>
+                    </f:for>
+                </div>
+            </details>
+        </f:if>
+    </form>
+</f:if>
+</html>

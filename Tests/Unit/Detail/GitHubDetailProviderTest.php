@@ -61,6 +61,7 @@ final class GitHubDetailProviderTest extends UnitTestCase
             ItemAction::COMMENT, ItemAction::EDIT, ItemAction::CLOSE, ItemAction::UNASSIGN_ME, ItemAction::ADD_LABEL,
             ItemAction::REMOVE_LABEL, ItemAction::APPROVE, ItemAction::REQUEST_CHANGES, ItemAction::MERGE, ItemAction::MARK_DONE,
             ItemAction::EDIT_COMMENT, ItemAction::DELETE_COMMENT, ItemAction::REPLY, ItemAction::RESOLVE, ItemAction::UNRESOLVE,
+            ItemAction::REACT,
         ], $detail->actions);
         self::assertSame(['9001', 'review-8001', 'review-8002', '9002'], array_column($detail->comments(), 'id'));
         self::assertFalse($detail->comment('9001')['canEdit'] ?? true);
@@ -88,6 +89,36 @@ final class GitHubDetailProviderTest extends UnitTestCase
         self::assertTrue($thread['resolvable'] && $thread['canResolve'] && $thread['canReply']);
         self::assertSame([false, true], array_column($thread['comments'], 'canDelete'));
         self::assertFalse($timeline[1]['canReply'], 'issue comments have no replies on GitHub');
+    }
+
+    #[Test]
+    public function reactionGroupsBecomeReactions(): void
+    {
+        $detail = $this->parse();
+
+        self::assertSame([
+            ['name' => 'tada', 'emoji' => '🎉', 'count' => 3, 'reacted' => true],
+            ['name' => 'heart', 'emoji' => '❤️', 'count' => 1, 'reacted' => false],
+        ], $detail->reactions, 'empty and unknown groups are left out');
+        self::assertSame(['PR_kwDO42', true], [$detail->subject, $detail->canReact]);
+        $comment = $detail->comment('9001');
+        self::assertNotNull($comment);
+        self::assertSame(['IC_9001', true, ['eyes']], [$comment['subject'], $comment['canReact'], array_column($comment['reactions'], 'name')]);
+        self::assertFalse($detail->comment('review-8001')['canReact'] ?? true);
+    }
+
+    #[Test]
+    public function reactionsAreAddedAndRemovedThroughGraphql(): void
+    {
+        $detail = $this->parse();
+        $connection = Fixture::connection(Provider::GitHub);
+
+        $add = json_decode((string)$this->subject->actionRequest($detail, ItemAction::REACT, ['subject' => 'IC_9001', 'emoji' => 'tada', 'remove' => ''], $connection)->getBody(), true);
+        self::assertStringContainsString('addReaction(', $add['query']);
+        self::assertSame(['id' => 'IC_9001', 'content' => 'HOORAY'], $add['variables']);
+        $remove = json_decode((string)$this->subject->actionRequest($detail, ItemAction::REACT, ['subject' => 'PR_kwDO42', 'emoji' => 'thumbsup', 'remove' => '1'], $connection)->getBody(), true);
+        self::assertStringContainsString('removeReaction(', $remove['query']);
+        self::assertSame('THUMBS_UP', $remove['variables']['content']);
     }
 
     #[Test]

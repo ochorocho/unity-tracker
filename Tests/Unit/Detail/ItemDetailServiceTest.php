@@ -22,6 +22,7 @@ use Ochorocho\UnityTracker\Detail\ItemDetailService;
 use Ochorocho\UnityTracker\Detail\ItemReference;
 use Ochorocho\UnityTracker\Service\FetchFailedException;
 use Ochorocho\UnityTracker\Tests\Unit\Fixtures\Fixture;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\RequestInterface;
 use Psr\Log\NullLogger;
@@ -36,6 +37,9 @@ final class ItemDetailServiceTest extends UnitTestCase
 
     /** @var list<array<mixed>> decoded bodies of the GraphQL requests */
     private array $graphql = [];
+
+    /** @var list<array<mixed>> decoded bodies of the GraphQL mutations */
+    private array $mutations = [];
 
     #[Test]
     public function allowedActionIsSentAfterReloadingTheDetail(): void
@@ -153,6 +157,44 @@ final class ItemDetailServiceTest extends UnitTestCase
     }
 
     #[Test]
+    public function reactionTheUserHasIsRemovedAnyOtherAdded(): void
+    {
+        $connection = Fixture::connection(Provider::GitHub);
+        $this->subject()->perform($this->reference(), $connection, ItemAction::REACT, ['subject' => '', 'emoji' => 'tada']);
+        $this->subject()->perform($this->reference(), $connection, ItemAction::REACT, ['subject' => '9001', 'emoji' => 'rocket']);
+
+        self::assertStringContainsString('removeReaction(', $this->mutations[0]['query']);
+        self::assertSame(['id' => 'PR_kwDO42', 'content' => 'HOORAY'], $this->mutations[0]['variables']);
+        self::assertStringContainsString('addReaction(', $this->mutations[1]['query']);
+        self::assertSame(['id' => 'IC_9001', 'content' => 'ROCKET'], $this->mutations[1]['variables']);
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function invalidReactions(): array
+    {
+        return [
+            'comment the user cannot react to' => ['review-8001', 'tada'],
+            'unknown comment' => ['123', 'tada'],
+            'emoji that is no choice' => ['', 'flag_de'],
+            'invalid name' => ['', 'tada"'],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('invalidReactions')]
+    public function invalidReactionIsRejected(string $subject, string $emoji): void
+    {
+        $this->expectException(InvalidActionException::class);
+        try {
+            $this->subject()->perform($this->reference(), Fixture::connection(Provider::GitHub), ItemAction::REACT, ['subject' => $subject, 'emoji' => $emoji]);
+        } finally {
+            self::assertSame([], $this->mutations);
+        }
+    }
+
+    #[Test]
     public function apiMessageIsPartOfTheError(): void
     {
         $this->actionResponse = new Response(405, [], '{"message": "Pull Request is not mergeable"}');
@@ -178,6 +220,9 @@ final class ItemDetailServiceTest extends UnitTestCase
             if (str_ends_with((string)$request->getUri(), '/graphql') && !str_starts_with($body['query'] ?? '', 'mutation')) {
                 $this->graphql[] = $body;
                 return Create::promiseFor(new Response(200, ['X-OAuth-Scopes' => 'repo'], Fixture::json('GitHub/graphql_pull_request.json')));
+            }
+            if (is_array($body)) {
+                $this->mutations[] = $body;
             }
             return Create::promiseFor($this->actionResponse ?? new Response(201, [], '{}'));
         };

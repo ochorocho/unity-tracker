@@ -58,8 +58,44 @@ final class GitLabDetailProviderTest extends UnitTestCase
         self::assertSame([
             ItemAction::COMMENT, ItemAction::EDIT, ItemAction::CLOSE, ItemAction::ASSIGN_ME, ItemAction::ADD_LABEL,
             ItemAction::REMOVE_LABEL, ItemAction::APPROVE, ItemAction::MERGE, ItemAction::MARK_DONE, ItemAction::EDIT_COMMENT,
-            ItemAction::DELETE_COMMENT, ItemAction::REPLY, ItemAction::RESOLVE, ItemAction::UNRESOLVE,
+            ItemAction::DELETE_COMMENT, ItemAction::REPLY, ItemAction::RESOLVE, ItemAction::UNRESOLVE, ItemAction::REACT,
         ], $detail->actions);
+    }
+
+    #[Test]
+    public function awardEmojiBecomeReactions(): void
+    {
+        $detail = $this->parse('merge_request', 'GitLab/graphql_merge_request.json');
+
+        self::assertSame([
+            ['name' => 'thumbsup', 'emoji' => '👍', 'count' => 2, 'reacted' => true],
+            ['name' => 'flag_de', 'emoji' => '🇩🇪', 'count' => 1, 'reacted' => false],
+        ], $detail->reactions, 'the eight choices first, invalid names dropped');
+        self::assertSame('gid://gitlab/MergeRequest/9012', $detail->subject);
+        self::assertTrue($detail->canReact);
+        $comment = $detail->comment('501');
+        self::assertNotNull($comment);
+        self::assertSame([['name' => 'tada', 'emoji' => '🎉', 'count' => 1, 'reacted' => false]], $comment['reactions']);
+        self::assertSame(['gid://gitlab/Note/501', true], [$comment['subject'], $comment['canReact']]);
+    }
+
+    #[Test]
+    public function issueAwardsComeFromTheRestApi(): void
+    {
+        $reference = $this->reference('issue', '');
+        $requests = $this->subject->detailRequests($reference, Fixture::connection(Provider::GitLab));
+        self::assertSame('https://gitlab.com/api/v4/projects/acme%2Fapp/issues/9/award_emoji?per_page=100', (string)$requests['awards']->getUri());
+
+        $detail = $this->subject->parseDetail($reference, [
+            'detail' => new Response(200, [], Fixture::json('GitLab/graphql_issue_closed.json')),
+            'scopes' => null,
+            'awards' => new Response(200, [], '[{"name": "rocket", "user": {"username": "me"}}, {"name": "custom", "user": {"username": "joe"}}]'),
+        ]);
+        self::assertSame([
+            ['name' => 'rocket', 'emoji' => '🚀', 'count' => 1, 'reacted' => true],
+            ['name' => 'custom', 'emoji' => ':custom:', 'count' => 1, 'reacted' => false],
+        ], $detail->reactions);
+        self::assertSame('gid://gitlab/Issue/3456', $detail->subject);
     }
 
     #[Test]
@@ -81,7 +117,7 @@ final class GitLabDetailProviderTest extends UnitTestCase
     {
         $detail = $this->parse('issue', 'GitLab/graphql_issue_closed.json', todo: '');
 
-        self::assertSame([ItemAction::COMMENT, ItemAction::REOPEN], $detail->actions);
+        self::assertSame([ItemAction::COMMENT, ItemAction::REOPEN, ItemAction::REACT], $detail->actions);
     }
 
     #[Test]
@@ -94,6 +130,8 @@ final class GitLabDetailProviderTest extends UnitTestCase
         self::assertNotContains(true, array_column($detail->comments(), 'canEdit'));
         self::assertNotContains(true, array_column($detail->comments(), 'canDelete'));
         self::assertNotContains(true, array_column($detail->timeline, 'canReply'));
+        self::assertNotContains(true, array_column($detail->comments(), 'canReact'));
+        self::assertFalse($detail->canReact);
     }
 
     #[Test]
@@ -137,6 +175,9 @@ final class GitLabDetailProviderTest extends UnitTestCase
         self::assertSame('https://gitlab.com/api/graphql', (string)$resolve->getUri());
         self::assertSame(['id' => 'gid://gitlab/Discussion/ccc333', 'resolve' => true], json_decode((string)$resolve->getBody(), true)['variables']);
         self::assertFalse(json_decode((string)$request(ItemAction::UNRESOLVE, ['thread' => 'ccc333', 'replyTo' => 'ccc333'])->getBody(), true)['variables']['resolve']);
+        $react = json_decode((string)$request(ItemAction::REACT, ['subject' => 'gid://gitlab/Note/501', 'emoji' => 'tada', 'remove' => ''])->getBody(), true);
+        self::assertStringContainsString('awardEmojiToggle', $react['query']);
+        self::assertSame(['id' => 'gid://gitlab/Note/501', 'name' => 'tada'], $react['variables']);
     }
 
     #[Test]

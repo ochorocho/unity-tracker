@@ -506,6 +506,15 @@
 			<trans-unit id="item.action.unresolve" resname="item.action.unresolve">
 				<source>Unresolve thread</source>
 			</trans-unit>
+			<trans-unit id="item.action.addReaction" resname="item.action.addReaction">
+				<source>Add reaction</source>
+			</trans-unit>
+			<trans-unit id="item.action.react" resname="item.action.react">
+				<source>React with :%s:</source>
+			</trans-unit>
+			<trans-unit id="item.reaction" resname="item.reaction">
+				<source>:%1$s: (%2$s)</source>
+			</trans-unit>
 			<trans-unit id="item.action.deleteComment" resname="item.action.deleteComment">
 				<source>Delete</source>
 			</trans-unit>
@@ -520,6 +529,9 @@
 			</trans-unit>
 			<trans-unit id="item.done.unresolve" resname="item.done.unresolve">
 				<source>Thread reopened.</source>
+			</trans-unit>
+			<trans-unit id="item.done.react" resname="item.done.react">
+				<source>Reaction updated.</source>
 			</trans-unit>
 			<trans-unit id="item.done.deleteComment" resname="item.done.deleteComment">
 				<source>Comment deleted.</source>

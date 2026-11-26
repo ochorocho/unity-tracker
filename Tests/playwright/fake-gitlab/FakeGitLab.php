@@ -22,7 +22,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  * specs reset it with `DELETE FROM sys_registry WHERE entry_namespace = 'unitytracker_fake'`.
  *
  * Discussions: jane's comment, tester's comment, a system note and jane's unresolved diff thread.
- * One older page (cursor OLDER) holds a system note.
+ * One older page (cursor OLDER) holds a system note. Award emoji: jane's 👍 on the merge request and 🎉 on her comment.
  */
 final class FakeGitLab
 {
@@ -33,6 +33,7 @@ final class FakeGitLab
     private const NAMESPACE = 'unitytracker_fake';
     private const OLDER = 'b2xkZXI=';
     private const MR = '/api/v4/projects/acme/app/merge_requests/12';
+    private const MR_ID = 'gid://gitlab/MergeRequest/1200';
 
     /**
      * Guzzle middleware.
@@ -84,7 +85,7 @@ final class FakeGitLab
     }
 
     /**
-     * @return array{title: string, description: string, discussions: list<array{id: string, resolvable: bool, resolved: bool, notes: list<array{id: int, author: string, body: string, system?: bool, path?: string}>}>}
+     * @return array{title: string, description: string, discussions: list<array{id: string, resolvable: bool, resolved: bool, notes: list<array{id: int, author: string, body: string, system?: bool, path?: string}>}>, awards: array<string, list<array{name: string, user: string}>>}
      */
     private function state(): array
     {
@@ -97,6 +98,11 @@ final class FakeGitLab
                 ['id' => 'b2', 'resolvable' => false, 'resolved' => false, 'notes' => [['id' => 102, 'author' => 'tester', 'body' => 'Will do.']]],
                 ['id' => 'c3', 'resolvable' => false, 'resolved' => false, 'notes' => [['id' => 103, 'author' => 'jane', 'body' => 'requested review from @tester', 'system' => true]]],
                 ['id' => 'd4', 'resolvable' => true, 'resolved' => false, 'notes' => [['id' => 104, 'author' => 'jane', 'body' => 'Typo in the redirect.', 'path' => 'src/Login.php']]],
+            ],
+            // awardable id → awards
+            'awards' => [
+                self::MR_ID => [['name' => 'thumbsup', 'user' => 'jane']],
+                'gid://gitlab/Note/101' => [['name' => 'tada', 'user' => 'jane']],
             ],
         ];
     }
@@ -143,6 +149,15 @@ final class FakeGitLab
             }
             return ['data' => ['discussionToggleResolve' => ['errors' => []]]];
         }
+        if (str_contains((string)($body['query'] ?? ''), 'awardEmojiToggle')) {
+            $id = (string)($body['variables']['id'] ?? '');
+            $name = (string)($body['variables']['name'] ?? '');
+            $awards = $state['awards'][$id] ?? [];
+            $mine = ['name' => $name, 'user' => 'tester'];
+            $state['awards'][$id] = in_array($mine, $awards, true) ? array_values(array_filter($awards, static fn(array $award): bool => $award !== $mine)) : [...$awards, $mine];
+            $this->save($state);
+            return ['data' => ['awardEmojiToggle' => ['errors' => []]]];
+        }
         if (str_contains((string)($body['query'] ?? ''), 'autocompleteUsers')) {
             $users = [['username' => 'jane', 'name' => 'Jane Doe'], ['username' => 'joe', 'name' => 'Joe Bloggs']];
             $search = strtolower((string)($body['variables']['search'] ?? ''));
@@ -151,6 +166,10 @@ final class FakeGitLab
                 static fn(array $user): bool => str_contains($user['username'], $search)
             ))]]];
         }
+        $awards = static fn(string $id): array => ['nodes' => array_map(
+            static fn(array $award): array => ['name' => $award['name'], 'emoji' => '', 'user' => ['username' => $award['user']]],
+            $state['awards'][$id] ?? []
+        )];
         $older = ($body['variables']['before'] ?? null) === self::OLDER;
         $discussions = $older
             ? [['id' => 'e5', 'resolvable' => false, 'resolved' => false, 'notes' => [['id' => 90, 'author' => 'jane', 'body' => 'created branch fix/login', 'system' => true]]]]
@@ -169,7 +188,8 @@ final class FakeGitLab
                 'url' => 'https://' . self::HOST . '/acme/app/-/merge_requests/12#note_' . $note['id'],
                 'author' => ['username' => $note['author']],
                 'position' => isset($note['path']) ? ['filePath' => $note['path'], 'newLine' => 12, 'oldLine' => null] : null,
-                'userPermissions' => ['adminNote' => $note['author'] === 'tester'],
+                'awardEmoji' => $awards('gid://gitlab/Note/' . $note['id']),
+                'userPermissions' => ['adminNote' => $note['author'] === 'tester', 'awardEmoji' => true],
             ], $discussion['notes'])],
         ], $discussions);
         return ['data' => [
@@ -177,6 +197,7 @@ final class FakeGitLab
             'project' => [
                 'labels' => ['nodes' => [['title' => 'bug', 'color' => '#d9534f'], ['title' => 'needs review', 'color' => '#428bca']]],
                 'target' => [
+                    'id' => self::MR_ID,
                     'title' => $state['title'],
                     'state' => 'opened',
                     'webUrl' => 'https://' . self::HOST . '/acme/app/-/merge_requests/12',
@@ -202,8 +223,9 @@ final class FakeGitLab
                     'detailedMergeStatus' => 'mergeable',
                     'mergeable' => true,
                     'approvedBy' => ['nodes' => []],
+                    'awardEmoji' => $awards(self::MR_ID),
                     'userPermissions' => [
-                        'updateMergeRequest' => true, 'createNote' => true, 'canMerge' => true, 'canApprove' => true, 'adminMergeRequest' => true,
+                        'readMergeRequest' => true, 'updateMergeRequest' => true, 'createNote' => true, 'canMerge' => true, 'canApprove' => true, 'adminMergeRequest' => true,
                     ],
                 ],
             ],

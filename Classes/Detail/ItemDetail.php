@@ -14,6 +14,7 @@ namespace Ochorocho\UnityTracker\Detail;
  *
  * @phpstan-import-type Comment from Timeline
  * @phpstan-import-type Entry from Timeline
+ * @phpstan-import-type Reaction from Reactions
  */
 final readonly class ItemDetail
 {
@@ -30,6 +31,8 @@ final readonly class ItemDetail
      * @param list<string> $actions allowed actions, see ItemAction
      * @param string $page cursor this page of the timeline was loaded with ("" = newest)
      * @param string $olderCursor cursor of the page before, "" if there is none
+     * @param list<Reaction> $reactions of the item itself
+     * @param string $subject the item's id to react with (see Timeline), "" if reactions are not supported
      */
     public function __construct(
         public ItemReference $reference,
@@ -54,6 +57,9 @@ final readonly class ItemDetail
         public string $missingScope = '',
         public string $page = '',
         public string $olderCursor = '',
+        public array $reactions = [],
+        public string $subject = '',
+        public bool $canReact = false,
     ) {}
 
     /**
@@ -111,9 +117,13 @@ final readonly class ItemDetail
             timeline: array_map(static fn(array $entry): array => array_merge($entry, [
                 'canReply' => false,
                 'canResolve' => false,
-                'comments' => array_map(static fn(array $comment): array => array_merge($comment, ['canEdit' => false, 'canDelete' => false]), $entry['comments']),
+                'comments' => array_map(
+                    static fn(array $comment): array => array_merge($comment, ['canEdit' => false, 'canDelete' => false, 'canReact' => false]),
+                    $entry['comments']
+                ),
             ]), $this->timeline),
             missingScope: $missingScope,
+            canReact: false,
         );
     }
 
@@ -165,11 +175,25 @@ final readonly class ItemDetail
     }
 
     /**
+     * What a reaction goes to: the item ("") or a comment of this page, with its current reactions.
+     *
+     * @return array{subject: string, reactions: list<Reaction>}|null null if the user cannot react to it
+     */
+    public function reactionTarget(string $id): ?array
+    {
+        if ($id === '') {
+            return $this->canReact && $this->subject !== '' ? ['subject' => $this->subject, 'reactions' => $this->reactions] : null;
+        }
+        $comment = $this->comment($id);
+        return $comment !== null && $comment['canReact'] ? ['subject' => $comment['subject'], 'reactions' => $comment['reactions']] : null;
+    }
+
+    /**
      * Whether any comment or thread of the page has the flag, e.g. "canEdit" or "canReply".
      */
     public function anyTimeline(string $flag): bool
     {
-        $records = in_array($flag, ['canEdit', 'canDelete'], true) ? $this->comments() : $this->timeline;
+        $records = in_array($flag, ['canEdit', 'canDelete', 'canReact'], true) ? $this->comments() : $this->timeline;
         return in_array(true, array_column($records, $flag), true);
     }
 

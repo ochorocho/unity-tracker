@@ -17,6 +17,7 @@ use Ochorocho\UnityTracker\Detail\ItemDetail;
 use Ochorocho\UnityTracker\Detail\ItemDetailService;
 use Ochorocho\UnityTracker\Detail\ItemReference;
 use Ochorocho\UnityTracker\Detail\ProviderHtml;
+use Ochorocho\UnityTracker\Detail\Reactions;
 use Ochorocho\UnityTracker\Service\FetchError;
 use Ochorocho\UnityTracker\Service\FetchFailedException;
 use Ochorocho\UnityTracker\Service\OverviewService;
@@ -268,6 +269,7 @@ final readonly class ItemController
             'description' => $this->providerHtml->prepare($detail->descriptionHtml, $connection->host, $this->imageUrl($connection)),
             'timeline' => $this->timeline($detail, $connection),
             'can' => array_fill_keys($detail->actions, true),
+            'reactionChoices' => Reactions::CHOICES,
         ];
     }
 

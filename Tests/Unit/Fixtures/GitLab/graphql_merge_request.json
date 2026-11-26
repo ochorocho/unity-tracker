@@ -22,6 +22,7 @@
         ]
       },
       "target": {
+        "id": "gid://gitlab/MergeRequest/9012",
         "title": "Fix login redirect",
         "state": "opened",
         "webUrl": "https://gitlab.com/acme/app/-/merge_requests/12",
@@ -74,7 +75,19 @@
                     },
                     "position": null,
                     "userPermissions": {
-                      "adminNote": false
+                      "adminNote": false,
+                      "awardEmoji": true
+                    },
+                    "awardEmoji": {
+                      "nodes": [
+                        {
+                          "name": "tada",
+                          "emoji": "🎉",
+                          "user": {
+                            "username": "joe"
+                          }
+                        }
+                      ]
                     }
                   }
                 ]
@@ -195,7 +208,40 @@
           "createNote": true,
           "canMerge": true,
           "canApprove": true,
-          "adminMergeRequest": true
+          "adminMergeRequest": true,
+          "readMergeRequest": true
+        },
+        "awardEmoji": {
+          "nodes": [
+            {
+              "name": "flag_de",
+              "emoji": "🇩🇪",
+              "user": {
+                "username": "joe"
+              }
+            },
+            {
+              "name": "thumbsup",
+              "emoji": "👍",
+              "user": {
+                "username": "joe"
+              }
+            },
+            {
+              "name": "thumbsup",
+              "emoji": "👍",
+              "user": {
+                "username": "me"
+              }
+            },
+            {
+              "name": "bad name!",
+              "emoji": "x",
+              "user": {
+                "username": "joe"
+              }
+            }
+          ]
         }
       }
     }

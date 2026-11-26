@@ -45,7 +45,10 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
                 reviewThreads(last: 100) {
                   nodes {
                     id isResolved path line viewerCanReply viewerCanResolve viewerCanUnresolve
-                    comments(first: 50) { nodes { databaseId body bodyHTML createdAt url viewerCanUpdate viewerCanDelete author { login } pullRequestReview { id } } }
+                    comments(first: 50) { nodes {
+                      id databaseId body bodyHTML createdAt url viewerCanUpdate viewerCanDelete author { login } pullRequestReview { id }
+                      viewerCanReact reactionGroups { content viewerHasReacted reactors { totalCount } }
+                    } }
                   }
                 }
                 isDraft merged mergeable baseRefName headRefName reviewDecision
@@ -57,8 +60,9 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
         GRAPHQL;
 
     private const COMMON_FIELDS = <<<'GRAPHQL'
-        title state url body bodyHTML createdAt
+        id title state url body bodyHTML createdAt
         author { login }
+        viewerCanReact reactionGroups { content viewerHasReacted reactors { totalCount } }
         labels(first: 50) { nodes { name color } }
         assignees(first: 20) { nodes { login } }
         viewerCanUpdate viewerDidAuthor viewerCanClose viewerCanReopen viewerCanLabel viewerCanAssign
@@ -72,7 +76,7 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
 
     /** Members of IssueTimelineItems, which PullRequestTimelineItems has as well */
     private const ISSUE_ITEM_FIELDS = <<<'GRAPHQL'
-        ... on IssueComment { databaseId body bodyHTML createdAt viewerCanUpdate viewerCanDelete author { login } }
+        ... on IssueComment { id databaseId body bodyHTML createdAt viewerCanUpdate viewerCanDelete author { login } viewerCanReact reactionGroups { content viewerHasReacted reactors { totalCount } } }
         ... on LabeledEvent { id createdAt actor { login } label { name } }
         ... on UnlabeledEvent { id createdAt actor { login } label { name } }
         ... on AssignedEvent { id createdAt actor { login } assignee { ... on User { login } ... on Bot { login } } }
@@ -99,7 +103,7 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
         ... on ConvertToDraftEvent { id createdAt actor { login } }
         ... on HeadRefForcePushedEvent { id createdAt actor { login } }
         ... on PullRequestCommit { id commit { abbreviatedOid messageHeadline committedDate author { name user { login } } } }
-        ... on PullRequestReview { id databaseId state body bodyHTML createdAt viewerCanUpdate author { login } }
+        ... on PullRequestReview { id databaseId state body bodyHTML createdAt viewerCanUpdate author { login } viewerCanReact reactionGroups { content viewerHasReacted reactors { totalCount } } }
         GRAPHQL;
 
     /** Event typename → label key suffix item.event.* */
@@ -117,6 +121,14 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
 
     private const UNRESOLVE_MUTATION = <<<'GRAPHQL'
         mutation($id: ID!) { unresolveReviewThread(input: {threadId: $id}) { thread { isResolved } } }
+        GRAPHQL;
+
+    private const ADD_REACTION_MUTATION = <<<'GRAPHQL'
+        mutation($id: ID!, $content: ReactionContent!) { addReaction(input: {subjectId: $id, content: $content}) { reaction { content } } }
+        GRAPHQL;
+
+    private const REMOVE_REACTION_MUTATION = <<<'GRAPHQL'
+        mutation($id: ID!, $content: ReactionContent!) { removeReaction(input: {subjectId: $id, content: $content}) { reaction { content } } }
         GRAPHQL;
 
     private const USERS_QUERY = <<<'GRAPHQL'
@@ -185,6 +197,9 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
             Payload::string($target, 'viewerLatestReview', 'state') === 'APPROVED',
             page: $before,
             olderCursor: Payload::bool($timeline, 'pageInfo', 'hasPreviousPage') ? Payload::string($timeline, 'pageInfo', 'startCursor') : '',
+            reactions: $this->reactions($target),
+            subject: Payload::string($target, 'id'),
+            canReact: Payload::bool($target, 'viewerCanReact'),
         );
         $detail = $this->withActions($detail, $target, Payload::string($repository, 'viewerPermission'));
 
@@ -231,6 +246,11 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
             ItemAction::REPLY => $this->rest($connection, 'POST', $pull . '/comments/' . (int)$parameters['replyTo'] . '/replies', ['body' => $parameters['body']]),
             ItemAction::RESOLVE => $this->graphql($connection, self::RESOLVE_MUTATION, ['id' => $parameters['thread']]),
             ItemAction::UNRESOLVE => $this->graphql($connection, self::UNRESOLVE_MUTATION, ['id' => $parameters['thread']]),
+            ItemAction::REACT => $this->graphql(
+                $connection,
+                $parameters['remove'] !== '' ? self::REMOVE_REACTION_MUTATION : self::ADD_REACTION_MUTATION,
+                ['id' => $parameters['subject'], 'content' => array_search($parameters['emoji'], Reactions::GITHUB, true)]
+            ),
             default => throw new \InvalidArgumentException('Unsupported action ' . $action, 1764240302),
         };
     }
@@ -313,6 +333,7 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
         $allow($detail->anyTimeline('canDelete'), ItemAction::DELETE_COMMENT);
         $allow($detail->anyTimeline('canReply'), ItemAction::REPLY);
         $allow($detail->anyTimeline('canResolve'), ItemAction::RESOLVE, ItemAction::UNRESOLVE);
+        $allow($detail->canReact || $detail->anyTimeline('canReact'), ItemAction::REACT);
 
         return $detail->withActions($actions);
     }
@@ -466,7 +487,29 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
             Payload::string($node, 'bodyHTML'),
             Payload::bool($node, 'viewerCanUpdate'),
             $kind !== 'pullReview' && Payload::bool($node, 'viewerCanDelete'),
+            $this->reactions($node),
+            Payload::string($node, 'id'),
+            Payload::bool($node, 'viewerCanReact'),
         );
+    }
+
+    /**
+     * reactionGroups → reactions; GitHub lists all eight, also those nobody chose.
+     *
+     * @param array<mixed> $node
+     * @return list<array{name: string, emoji: string, count: int, reacted: bool}>
+     */
+    private function reactions(array $node): array
+    {
+        $reactions = [];
+        foreach (Payload::list($node, 'reactionGroups') as $group) {
+            $name = Reactions::GITHUB[Payload::string($group, 'content')] ?? null;
+            $count = Payload::int($group, 'reactors', 'totalCount');
+            if ($name !== null && $count > 0) {
+                $reactions[] = Reactions::reaction($name, $count, Payload::bool($group, 'viewerHasReacted'));
+            }
+        }
+        return Reactions::sorted($reactions);
     }
 
     private function date(string $value): ?\DateTimeImmutable
