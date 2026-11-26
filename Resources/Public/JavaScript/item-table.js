@@ -74,11 +74,8 @@ export class ItemTable extends LitElement {
   sort(event, column, direction) {
     this.sortColumn = column;
     this.sortDirection = direction;
-    // v14 shows dropdowns as popovers that stay open, v13's Bootstrap closes them itself.
-    const menu = event.currentTarget.closest('.dropdown-menu');
-    if (menu?.matches(':popover-open')) {
-      menu.hidePopover();
-    }
+    // The backend shows dropdowns as popovers, which stay open after a choice.
+    event.currentTarget.closest('.dropdown-menu')?.hidePopover?.();
   }
 
   render() {

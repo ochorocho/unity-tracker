@@ -115,7 +115,7 @@ export class Overview extends LitElement {
   }
 
   /**
-   * Opens the detail sheet like the core's contextual editing (v14: side sheet; v13: large modal).
+   * Opens the detail sheet like the core's contextual editing (side sheet).
    * The overview reloads after the sheet closes if an action changed something.
    */
   openItem(event) {
@@ -139,8 +139,8 @@ export class Overview extends LitElement {
       type: Modal.types.iframe,
       title: `${item.project} ${item.reference}`.trim(),
       content: url,
-      size: Modal.sizes.expand ?? Modal.sizes.large,
-      position: Modal.positions?.sheet,
+      size: Modal.sizes.expand,
+      position: Modal.positions.sheet,
       resizeIdentifier: 'unitytracker.item',
     });
     modal.addEventListener('typo3-modal-hidden', () => {

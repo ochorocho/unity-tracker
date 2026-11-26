@@ -10,7 +10,8 @@ namespace Ochorocho\UnityTracker\Security;
 
 /**
  * Authenticated encryption (libsodium secretbox) for access tokens at rest.
- * The key is derived from TYPO3's encryptionKey; TYPO3 v13 has no core cipher service.
+ * The key is derived from TYPO3's encryptionKey. Kept instead of the core's CipherService (v14+): the stored
+ * format (prefix v1:) must stay readable.
  */
 final readonly class TokenCipher
 {

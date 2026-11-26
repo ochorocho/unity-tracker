@@ -12,7 +12,7 @@ use Ochorocho\UnityTracker\Service\FetchError;
 use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\Components\ButtonBar;
-use TYPO3\CMS\Backend\Template\Components\Buttons\LinkButton;
+use TYPO3\CMS\Backend\Template\Components\ComponentFactory;
 use TYPO3\CMS\Backend\Template\ModuleTemplate;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Http\RedirectResponse;
@@ -36,6 +36,7 @@ final readonly class ModuleContext
         private UriBuilder $uriBuilder,
         private IconFactory $iconFactory,
         private FlashMessageService $flashMessageService,
+        private ComponentFactory $componentFactory,
     ) {}
 
     public function backendUser(): BackendUserAuthentication
@@ -90,7 +91,7 @@ final readonly class ModuleContext
 
     public function addButton(ModuleTemplate $view, string $href, string $labelKey, string $icon, int $group): void
     {
-        $button = GeneralUtility::makeInstance(LinkButton::class)
+        $button = $this->componentFactory->createLinkButton()
             ->setHref($href)
             ->setTitle($this->translate($labelKey))
             ->setShowLabelText(true)

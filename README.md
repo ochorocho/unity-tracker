@@ -1,6 +1,6 @@
 # EXT:unity_tracker
 
-TYPO3 v13.4 / v14.3 backend module (`ochorocho/unity-tracker`) that shows what needs your
+TYPO3 v14.3 / v15 backend module (`ochorocho/unity-tracker`) that shows what needs your
 attention across all your GitLab and GitHub accounts, in one place.
 
 ## What it shows
@@ -21,8 +21,8 @@ request notification costs one extra request (cached with the overview) that add
 
 ## Details and actions
 
-Clicking an issue, merge request or pull request opens it in a sheet (TYPO3 v14: the side sheet of
-contextual editing; v13: a large modal): description, labels, assignees and the activity. The
+Clicking an issue, merge request or pull request opens it in a sheet (the side sheet of
+contextual editing): description, labels, assignees and the activity. The
 icon next to the title opens it on GitLab/GitHub; other items (releases, pipelines, …) link there
 directly.
 

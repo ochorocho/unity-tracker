@@ -38,13 +38,17 @@ e2e:
             - playwright-report/
         expire_in: 1 week
 
-# Same suite on the lower end of the supported range.
-e2e-typo3-v13:
+# Same checks on the development branch of the next major (TYPO3 v15 needs PHP 8.5).
+e2e-typo3-v15:
     extends: e2e
+    allow_failure: true
     variables:
-        TYPO3_VERSION: '^13.4'
+        TYPO3_VERSION: '15.0.x-dev'
     script:
+        - ddev config --php-version=8.5
         - ddev dotenv set .ddev/.env.web --typo3-version="${TYPO3_VERSION}"
         - ddev start
+        - ddev exec -d /var/www/html "composer run ci:php:stan"
+        - ddev exec -d /var/www/html "composer run ci:php:unit"
         - ddev npm ci
         - ddev playwright test

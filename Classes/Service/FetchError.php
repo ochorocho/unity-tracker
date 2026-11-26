@@ -32,7 +32,7 @@ final readonly class FetchError
 
     public static function fromThrowable(Connection $connection, \Throwable $throwable): self
     {
-        // Guzzle 7 (TYPO3 v13) and 8 (v14) both use these types.
+        // Guzzle 7 and 8 both use these types.
         if ($throwable instanceof NetworkExceptionInterface) {
             return new self($connection->name(), self::UNREACHABLE, $connection->host);
         }

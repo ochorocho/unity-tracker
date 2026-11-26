@@ -96,7 +96,9 @@ if [ ! -f "${COMPOSER_JSON}" ] || [ "${TYPO3_VERSION}" != "${CURRENT_TYPO3_VERSI
         "sort-packages": true,
         "vendor-dir": "vendor"
     },
-    "extra": { "typo3/cms": { "web-dir": "public" } }
+    "extra": { "typo3/cms": { "web-dir": "public" } },
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }
 EOF
     echo "${TYPO3_VERSION}" > "${TYPO3_VERSION_MARKER}"
