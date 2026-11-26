@@ -61,7 +61,7 @@ final class GitHubDetailProviderTest extends UnitTestCase
             ItemAction::COMMENT, ItemAction::EDIT, ItemAction::CLOSE, ItemAction::UNASSIGN_ME, ItemAction::ADD_LABEL,
             ItemAction::REMOVE_LABEL, ItemAction::ADD_ASSIGNEE, ItemAction::REMOVE_ASSIGNEE, ItemAction::SET_MILESTONE, ItemAction::LOCK,
             ItemAction::ADD_REVIEWER, ItemAction::REMOVE_REVIEWER, ItemAction::UNSUBSCRIBE,
-            ItemAction::APPROVE, ItemAction::REQUEST_CHANGES, ItemAction::MERGE, ItemAction::MARK_DONE,
+            ItemAction::APPROVE, ItemAction::REQUEST_CHANGES, ItemAction::MERGE, ItemAction::ENABLE_AUTO_MERGE, ItemAction::MARK_DRAFT, ItemAction::MARK_DONE,
             ItemAction::EDIT_COMMENT, ItemAction::DELETE_COMMENT, ItemAction::REPLY, ItemAction::RESOLVE, ItemAction::UNRESOLVE,
             ItemAction::REACT, ItemAction::TOGGLE_TASK,
         ], $detail->actions);
@@ -91,6 +91,51 @@ final class GitHubDetailProviderTest extends UnitTestCase
         self::assertTrue($thread['resolvable'] && $thread['canResolve'] && $thread['canReply']);
         self::assertSame([false, true], array_column($thread['comments'], 'canDelete'));
         self::assertFalse($timeline[1]['canReply'], 'issue comments have no replies on GitHub');
+    }
+
+    #[Test]
+    public function mergeStateIsParsed(): void
+    {
+        $merge = $this->parse()->merge;
+
+        self::assertNotNull($merge);
+        self::assertSame(['failed', 'https://github.com/acme/app/pull/42/checks'], [$merge->pipeline, $merge->pipelineUrl]);
+        self::assertSame('review_required', $merge->reviewDecision);
+        self::assertSame(['not_approved', 'ci_must_pass'], $merge->blockers);
+        self::assertSame(['squash', 'merge'], $merge->methods, 'the default method first');
+        self::assertTrue($merge->deleteBranch);
+        self::assertSame([str_repeat('a', 40), 'REF_1'], [$merge->headSha, $merge->branchRef]);
+    }
+
+    #[Test]
+    public function mergeWidgetActionsAreGraphqlMutations(): void
+    {
+        $detail = $this->parse();
+        $connection = Fixture::connection(Provider::GitHub);
+        $mutation = fn(string $action, array $parameters = []): array => json_decode(
+            (string)$this->subject->actionRequest($detail, $action, $parameters, $connection)->getBody(),
+            true
+        );
+
+        $auto = $mutation(ItemAction::ENABLE_AUTO_MERGE, ['method' => 'squash', 'squash' => '', 'deleteBranch' => '', 'sha' => str_repeat('a', 40)]);
+        self::assertStringContainsString('enablePullRequestAutoMerge(', $auto['query']);
+        self::assertSame(['id' => 'PR_kwDO42', 'method' => 'SQUASH', 'sha' => str_repeat('a', 40)], $auto['variables']);
+        self::assertSame(['id' => 'PR_kwDO42', 'sha' => str_repeat('a', 40)], $mutation(ItemAction::UPDATE_BRANCH)['variables']);
+        self::assertStringContainsString('convertPullRequestToDraft(', $mutation(ItemAction::MARK_DRAFT)['query']);
+        self::assertSame(['id' => 'REF_1'], $mutation(ItemAction::DELETE_BRANCH)['variables']);
+    }
+
+    #[Test]
+    public function issueIsClosedAsNotPlanned(): void
+    {
+        $detail = $this->parse(static function (array $payload): array {
+            $payload['data']['repository']['target']['state'] = 'OPEN';
+            return $payload;
+        });
+        $request = $this->subject->actionRequest($detail, ItemAction::CLOSE_NOT_PLANNED, [], Fixture::connection(Provider::GitHub));
+
+        self::assertSame('PATCH https://api.github.com/repos/acme/app/issues/42', $request->getMethod() . ' ' . $request->getUri());
+        self::assertSame('{"state":"closed","state_reason":"not_planned"}', (string)$request->getBody());
     }
 
     #[Test]
@@ -205,7 +250,9 @@ final class GitHubDetailProviderTest extends UnitTestCase
         self::assertSame('DELETE', $unassign->getMethod());
         self::assertSame('{"assignees":["octocat"]}', (string)$unassign->getBody());
         self::assertSame('{"event":"REQUEST_CHANGES","body":"Please test"}', (string)$request(ItemAction::REQUEST_CHANGES, ['body' => 'Please test'])->getBody());
-        self::assertSame('PUT https://api.github.com/repos/acme/app/pulls/42/merge', $request(ItemAction::MERGE)->getMethod() . ' ' . $request(ItemAction::MERGE)->getUri());
+        $merge = $request(ItemAction::MERGE, ['method' => 'squash', 'squash' => '', 'deleteBranch' => '', 'sha' => str_repeat('a', 40)]);
+        self::assertSame('PUT https://api.github.com/repos/acme/app/pulls/42/merge', $merge->getMethod() . ' ' . $merge->getUri());
+        self::assertSame(['merge_method' => 'squash', 'sha' => str_repeat('a', 40)], json_decode((string)$merge->getBody(), true));
         self::assertSame('PATCH https://api.github.com/notifications/threads/7', $request(ItemAction::MARK_DONE)->getMethod() . ' ' . $request(ItemAction::MARK_DONE)->getUri());
         $editComment = $request(ItemAction::EDIT_COMMENT, ['comment' => '9002', 'body' => 'Fixed in 1a2b3c']);
         self::assertSame('PATCH https://api.github.com/repos/acme/app/issues/comments/9002', $editComment->getMethod() . ' ' . $editComment->getUri());

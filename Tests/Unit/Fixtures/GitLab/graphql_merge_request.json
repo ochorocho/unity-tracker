@@ -209,7 +209,9 @@
           "canMerge": true,
           "canApprove": true,
           "adminMergeRequest": true,
-          "readMergeRequest": true
+          "readMergeRequest": true,
+          "pushToSourceBranch": true,
+          "removeSourceBranch": true
         },
         "awardEmoji": {
           "nodes": [
@@ -268,7 +270,41 @@
               "username": "ann"
             }
           ]
-        }
+        },
+        "diffHeadSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "shouldBeRebased": true,
+        "rebaseInProgress": false,
+        "squashOnMerge": true,
+        "squashReadOnly": false,
+        "shouldRemoveSourceBranch": null,
+        "forceRemoveSourceBranch": false,
+        "autoMergeEnabled": false,
+        "availableAutoMergeStrategies": [
+          "MERGE_WHEN_CHECKS_PASS"
+        ],
+        "approvalsRequired": 2,
+        "approvalsLeft": 1,
+        "headPipeline": {
+          "status": "FAILED",
+          "path": "/acme/app/-/pipelines/77",
+          "detailedStatus": {
+            "text": "Failed"
+          }
+        },
+        "mergeabilityChecks": [
+          {
+            "identifier": "CI_MUST_PASS",
+            "status": "FAILED"
+          },
+          {
+            "identifier": "CONFLICT",
+            "status": "SUCCESS"
+          },
+          {
+            "identifier": "NOT_APPROVED",
+            "status": "FAILED"
+          }
+        ]
       },
       "milestones": {
         "nodes": [
@@ -285,7 +321,8 @@
             "title": "x"
           }
         ]
-      }
+      },
+      "removeSourceBranchAfterMerge": true
     }
   }
 }

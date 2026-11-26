@@ -39,6 +39,7 @@ final readonly class ItemDetail
      * @param list<array{id: string, title: string}> $availableMilestones open milestones to choose from
      * @param string $dueDate "Y-m-d" or ""
      * @param list<string> $participants user names
+     * @param MergeState|null $merge merge/pull requests only
      */
     public function __construct(
         public ItemReference $reference,
@@ -74,6 +75,7 @@ final readonly class ItemDetail
         public bool $locked = false,
         public array $participants = [],
         public bool $subscribed = false,
+        public ?MergeState $merge = null,
     ) {}
 
     /**

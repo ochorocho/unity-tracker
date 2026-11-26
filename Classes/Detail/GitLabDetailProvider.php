@@ -65,13 +65,21 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
           project(fullPath: $fullPath) {
             labels(first: 100, includeAncestorGroups: true) { nodes { title color } }
             milestones(state: active, includeAncestors: true, first: 50) { nodes { id title } }
+            removeSourceBranchAfterMerge
             target: mergeRequest(iid: $iid) {
               %s
               draft sourceBranch targetBranch detailedMergeStatus mergeable
               approvedBy(first: 50) { nodes { username } }
               reviewers(first: 20) { nodes { username } }
               awardEmoji { nodes { name emoji user { username } } }
-              userPermissions { readMergeRequest updateMergeRequest createNote canMerge canApprove adminMergeRequest }
+              diffHeadSha shouldBeRebased rebaseInProgress squashOnMerge squashReadOnly
+              shouldRemoveSourceBranch forceRemoveSourceBranch autoMergeEnabled availableAutoMergeStrategies
+              approvalsRequired approvalsLeft
+              headPipeline { status path detailedStatus { text } }
+              mergeabilityChecks { identifier status }
+              userPermissions {
+                readMergeRequest updateMergeRequest createNote canMerge canApprove adminMergeRequest pushToSourceBranch removeSourceBranch
+              }
             }
           }
         }
@@ -95,6 +103,21 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
           result: %1$s%2$s(input: {projectPath: $path, iid: $iid, %4$s}) { errors }
         }
         GRAPHQL;
+
+    private const ACCEPT_MUTATION = <<<'GRAPHQL'
+        mutation($path: ID!, $iid: String!, $sha: String!, $squash: Boolean, $remove: Boolean) {
+          mergeRequestAccept(input: {
+            projectPath: $path, iid: $iid, strategy: MERGE_WHEN_CHECKS_PASS, sha: $sha, squash: $squash, shouldRemoveSourceBranch: $remove
+          }) { errors }
+        }
+        GRAPHQL;
+
+    /** GitLab pipeline status → MergeState::PIPELINE_STATES */
+    private const PIPELINE_STATES = [
+        'SUCCESS' => 'success', 'FAILED' => 'failed', 'RUNNING' => 'running', 'CANCELED' => 'canceled', 'CANCELING' => 'canceled',
+        'SKIPPED' => 'skipped', 'MANUAL' => 'manual', 'CREATED' => 'pending', 'PENDING' => 'pending', 'PREPARING' => 'pending',
+        'WAITING_FOR_RESOURCE' => 'pending', 'WAITING_FOR_CALLBACK' => 'pending', 'SCHEDULED' => 'pending',
+    ];
 
     private const USERS_QUERY = <<<'GRAPHQL'
         query($fullPath: ID!, $search: String) {
@@ -195,8 +218,9 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
                 Payload::list($target, 'participants', 'nodes')
             ))),
             subscribed: Payload::bool($target, 'subscribed'),
+            merge: $reference->isChange() ? $this->mergeState($target, Payload::array($payload, 'data', 'project'), $permissions) : null,
         );
-        $detail = $this->withActions($detail, $permissions, Payload::bool($target, 'mergeable'));
+        $detail = $this->withActions($detail, $permissions, $target);
 
         $scopes = Responses::json($responses['scopes'] ?? null);
         if ($scopes !== null && !in_array(self::WRITE_SCOPE, Payload::array($scopes, 'scopes'), true)) {
@@ -223,7 +247,17 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
             ItemAction::REMOVE_LABEL => $this->rest($connection, 'PUT', $path, ['remove_labels' => $parameters['label']]),
             ItemAction::APPROVE => $this->rest($connection, 'POST', $path . '/approve'),
             ItemAction::UNAPPROVE => $this->rest($connection, 'POST', $path . '/unapprove'),
-            ItemAction::MERGE => $this->rest($connection, 'PUT', $path . '/merge'),
+            ItemAction::MERGE => $this->rest($connection, 'PUT', $path . '/merge', $this->mergeOptions($detail, $parameters)),
+            ItemAction::ENABLE_AUTO_MERGE => $this->graphql($connection, self::ACCEPT_MUTATION, [
+                'path' => $reference->project,
+                'iid' => (string)$reference->number,
+                'sha' => $parameters['sha'],
+                'squash' => $this->mergeOptions($detail, $parameters)['squash'] ?? null,
+                'remove' => $this->mergeOptions($detail, $parameters)['should_remove_source_branch'] ?? null,
+            ]),
+            ItemAction::DISABLE_AUTO_MERGE => $this->rest($connection, 'POST', $path . '/cancel_merge_when_pipeline_succeeds'),
+            ItemAction::UPDATE_BRANCH => $this->rest($connection, 'PUT', $path . '/rebase'),
+            ItemAction::MARK_READY, ItemAction::MARK_DRAFT => $this->set($connection, $reference, 'SetDraft', 'Boolean!', 'draft: $value', $action === ItemAction::MARK_DRAFT),
             ItemAction::MARK_DONE => $this->rest($connection, 'POST', '/todos/' . $reference->todoId . '/mark_as_done'),
             ItemAction::EDIT_COMMENT => $this->rest($connection, 'PUT', $path . '/notes/' . (int)$parameters['comment'], ['body' => $parameters['body']]),
             ItemAction::DELETE_COMMENT => $this->rest($connection, 'DELETE', $path . '/notes/' . (int)$parameters['comment']),
@@ -288,8 +322,9 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
     /**
      * @param array<mixed> $permissions
      */
-    private function withActions(ItemDetail $detail, array $permissions, bool $mergeable): ItemDetail
+    private function withActions(ItemDetail $detail, array $permissions, array $target): ItemDetail
     {
+        $mergeable = Payload::bool($target, 'mergeable');
         $isChange = $detail->reference->isChange();
         $open = $detail->state === ItemDetail::STATE_OPEN;
         $update = Payload::bool($permissions, $isChange ? 'updateMergeRequest' : 'updateIssue');
@@ -319,7 +354,20 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
         if ($isChange && $open) {
             $allow(!$detail->approvedByViewer && Payload::bool($permissions, 'canApprove'), ItemAction::APPROVE);
             $allow($detail->approvedByViewer, ItemAction::UNAPPROVE);
-            $allow($mergeable && !$detail->draft && Payload::bool($permissions, 'canMerge'), ItemAction::MERGE);
+            $canMerge = Payload::bool($permissions, 'canMerge');
+            $autoMerge = $detail->merge->autoMerge ?? false;
+            $allow($mergeable && !$detail->draft && $canMerge, ItemAction::MERGE);
+            $allow(
+                !$mergeable && !$autoMerge && $canMerge && in_array('MERGE_WHEN_CHECKS_PASS', Payload::array($target, 'availableAutoMergeStrategies'), true),
+                ItemAction::ENABLE_AUTO_MERGE
+            );
+            $allow($autoMerge && $canMerge, ItemAction::DISABLE_AUTO_MERGE);
+            $allow(
+                Payload::bool($target, 'shouldBeRebased') && !Payload::bool($target, 'rebaseInProgress') && Payload::bool($permissions, 'pushToSourceBranch'),
+                ItemAction::UPDATE_BRANCH
+            );
+            $allow($update && $detail->draft, ItemAction::MARK_READY);
+            $allow($update && !$detail->draft, ItemAction::MARK_DRAFT);
         }
         $allow($detail->reference->todoId !== '', ItemAction::MARK_DONE);
         $allow($detail->anyTimeline('canEdit'), ItemAction::EDIT_COMMENT);
@@ -396,6 +444,62 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
             ]);
         }
         return $timeline;
+    }
+
+    /**
+     * @param array<mixed> $target the merge request
+     * @param array<mixed> $project
+     * @param array<mixed> $permissions
+     */
+    private function mergeState(array $target, array $project, array $permissions): MergeState
+    {
+        $blockers = [];
+        foreach (Payload::list($target, 'mergeabilityChecks') as $check) {
+            if (Payload::string($check, 'status') === 'FAILED') {
+                $blockers[] = strtolower(Payload::string($check, 'identifier'));
+            }
+        }
+        $status = Payload::string($target, 'detailedMergeStatus');
+        if ($blockers === [] && !in_array($status, ['', 'MERGEABLE', 'mergeable'], true)) {
+            $blockers[] = strtolower($status);
+        }
+        $url = parse_url(Payload::url($target, 'webUrl'));
+        $pipelinePath = Payload::string($target, 'headPipeline', 'path');
+        // null: the merge request does not say, the project's default applies.
+        $removeBranch = $target['shouldRemoveSourceBranch'] ?? null;
+        return new MergeState(
+            pipeline: self::PIPELINE_STATES[Payload::string($target, 'headPipeline', 'status')] ?? '',
+            pipelineText: Payload::string($target, 'headPipeline', 'detailedStatus', 'text'),
+            pipelineUrl: str_starts_with($pipelinePath, '/') && isset($url['host']) ? 'https://' . $url['host'] . $pipelinePath : '',
+            approvalsRequired: Payload::int($target, 'approvalsRequired'),
+            approvalsLeft: Payload::int($target, 'approvalsLeft'),
+            blockers: array_values(array_unique(array_filter($blockers, static fn(string $blocker): bool => preg_match('/^[a-z_]{1,64}$/', $blocker) === 1))),
+            squash: Payload::bool($target, 'squashOnMerge'),
+            squashLocked: Payload::bool($target, 'squashReadOnly'),
+            deleteBranch: Payload::bool($target, 'forceRemoveSourceBranch')
+                || (is_bool($removeBranch) ? $removeBranch : Payload::bool($project, 'removeSourceBranchAfterMerge')),
+            canDeleteBranch: Payload::bool($permissions, 'removeSourceBranch'),
+            autoMerge: Payload::bool($target, 'autoMergeEnabled'),
+            headSha: preg_match('/^[0-9a-f]{40,64}$/', Payload::string($target, 'diffHeadSha')) === 1 ? Payload::string($target, 'diffHeadSha') : '',
+        );
+    }
+
+    /**
+     * Options of PUT …/merge; squash only if the project lets the user choose.
+     *
+     * @param array<string, string> $parameters
+     * @return array<string, mixed>
+     */
+    private function mergeOptions(ItemDetail $detail, array $parameters): array
+    {
+        $options = ['sha' => $parameters['sha']];
+        if ($detail->merge->canDeleteBranch ?? false) {
+            $options['should_remove_source_branch'] = $parameters['deleteBranch'] === '1';
+        }
+        if (!($detail->merge->squashLocked ?? true)) {
+            $options['squash'] = $parameters['squash'] === '1';
+        }
+        return array_filter($options, static fn(mixed $value): bool => $value !== '');
     }
 
     /**

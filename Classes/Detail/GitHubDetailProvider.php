@@ -29,6 +29,7 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
             viewerPermission
             labels(first: 100) { nodes { name color } }
             milestones(first: 50, states: OPEN) { nodes { number title } }
+            mergeCommitAllowed squashMergeAllowed rebaseMergeAllowed deleteBranchOnMerge viewerDefaultMergeMethod
             target: issueOrPullRequest(number: $number) {
               ... on Issue {
                 %1$s
@@ -56,6 +57,8 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
                 isDraft merged mergeable baseRefName headRefName reviewDecision
                 reviewRequests(first: 20) { nodes { requestedReviewer { ... on User { login } ... on Bot { login } } } }
                 latestReviews(first: 20) { nodes { state author { login } } }
+                mergeStateStatus headRefOid headRef { id } statusCheckRollup { state } autoMergeRequest { enabledAt }
+                viewerCanDeleteHeadRef viewerCanUpdateBranch viewerCanEnableAutoMerge viewerCanDisableAutoMerge
                 viewerLatestReview { state }
               }
             }
@@ -144,6 +147,22 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
         }
         GRAPHQL;
 
+    private const PULL_REQUEST_MUTATIONS = [
+        ItemAction::ENABLE_AUTO_MERGE => 'mutation($id: ID!, $method: PullRequestMergeMethod!, $sha: GitObjectID) {
+          enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: $method, expectedHeadOid: $sha}) { clientMutationId }
+        }',
+        ItemAction::DISABLE_AUTO_MERGE => 'mutation($id: ID!) { disablePullRequestAutoMerge(input: {pullRequestId: $id}) { clientMutationId } }',
+        ItemAction::UPDATE_BRANCH => 'mutation($id: ID!, $sha: GitObjectID) {
+          updatePullRequestBranch(input: {pullRequestId: $id, expectedHeadOid: $sha}) { clientMutationId }
+        }',
+        ItemAction::MARK_READY => 'mutation($id: ID!) { markPullRequestReadyForReview(input: {pullRequestId: $id}) { clientMutationId } }',
+        ItemAction::MARK_DRAFT => 'mutation($id: ID!) { convertPullRequestToDraft(input: {pullRequestId: $id}) { clientMutationId } }',
+        ItemAction::DELETE_BRANCH => 'mutation($id: ID!) { deleteRef(input: {refId: $id}) { clientMutationId } }',
+    ];
+
+    /** statusCheckRollup state → MergeState::PIPELINE_STATES */
+    private const CHECK_STATES = ['SUCCESS' => 'success', 'FAILURE' => 'failed', 'ERROR' => 'failed', 'PENDING' => 'pending', 'EXPECTED' => 'pending'];
+
     private const USERS_QUERY = <<<'GRAPHQL'
         query($owner: String!, $name: String!, $search: String) {
           repository(owner: $owner, name: $name) { mentionableUsers(query: $search, first: 10) { nodes { login name } } }
@@ -227,6 +246,7 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
                 Payload::list($target, 'participants', 'nodes')
             ))),
             subscribed: Payload::string($target, 'viewerSubscription') === 'SUBSCRIBED',
+            merge: $isPullRequest ? $this->mergeState($target, $repository) : null,
         );
         $detail = $this->withActions($detail, $target, Payload::string($repository, 'viewerPermission'));
 
@@ -257,7 +277,20 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
             ItemAction::REMOVE_LABEL => $this->rest($connection, 'DELETE', $issue . '/labels/' . rawurlencode($parameters['label'])),
             ItemAction::APPROVE => $this->rest($connection, 'POST', $pull . '/reviews', ['event' => 'APPROVE', 'body' => $parameters['body'] ?? '']),
             ItemAction::REQUEST_CHANGES => $this->rest($connection, 'POST', $pull . '/reviews', ['event' => 'REQUEST_CHANGES', 'body' => $parameters['body']]),
-            ItemAction::MERGE => $this->rest($connection, 'PUT', $pull . '/merge', ['merge_method' => 'merge']),
+            ItemAction::MERGE => $this->rest($connection, 'PUT', $pull . '/merge', array_filter(['merge_method' => $parameters['method'], 'sha' => $parameters['sha']])),
+            ItemAction::ENABLE_AUTO_MERGE => $this->graphql($connection, self::PULL_REQUEST_MUTATIONS[$action], [
+                'id' => $detail->subject,
+                'method' => strtoupper($parameters['method']),
+                'sha' => $parameters['sha'] !== '' ? $parameters['sha'] : null,
+            ]),
+            ItemAction::UPDATE_BRANCH => $this->graphql($connection, self::PULL_REQUEST_MUTATIONS[$action], [
+                'id' => $detail->subject,
+                'sha' => ($detail->merge->headSha ?? '') !== '' ? $detail->merge?->headSha : null,
+            ]),
+            ItemAction::DISABLE_AUTO_MERGE, ItemAction::MARK_READY, ItemAction::MARK_DRAFT
+                => $this->graphql($connection, self::PULL_REQUEST_MUTATIONS[$action], ['id' => $detail->subject]),
+            ItemAction::DELETE_BRANCH => $this->graphql($connection, self::PULL_REQUEST_MUTATIONS[$action], ['id' => $detail->merge->branchRef ?? '']),
+            ItemAction::CLOSE_NOT_PLANNED => $this->rest($connection, 'PATCH', $issue, ['state' => 'closed', 'state_reason' => 'not_planned']),
             ItemAction::MARK_DONE => $this->rest($connection, 'PATCH', '/notifications/threads/' . $detail->reference->todoId),
             ItemAction::EDIT_COMMENT => match ($comment['kind'] ?? '') {
                 'issue' => $this->rest($connection, 'PATCH', $repository . '/issues/comments/' . $comment['number'], ['body' => $parameters['body']]),
@@ -352,6 +385,7 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
         $allow($permission !== '', ItemAction::COMMENT);
         $allow(Payload::bool($target, 'viewerCanUpdate'), ItemAction::EDIT);
         $allow($open && Payload::bool($target, 'viewerCanClose'), ItemAction::CLOSE);
+        $allow($open && !$isPullRequest && Payload::bool($target, 'viewerCanClose'), ItemAction::CLOSE_NOT_PLANNED);
         $allow($detail->state === ItemDetail::STATE_CLOSED && Payload::bool($target, 'viewerCanReopen'), ItemAction::REOPEN);
         $canAssign = Payload::bool($target, 'viewerCanAssign');
         $allow($canAssign && !$detail->isAssignedToViewer(), ItemAction::ASSIGN_ME);
@@ -374,7 +408,21 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
                 $detail->mergeStatus === 'mergeable' && !$detail->draft && in_array($permission, self::WRITE_PERMISSIONS, true),
                 ItemAction::MERGE
             );
+            $autoMerge = $detail->merge->autoMerge ?? false;
+            $allow(!$autoMerge && $detail->subject !== '' && Payload::bool($target, 'viewerCanEnableAutoMerge'), ItemAction::ENABLE_AUTO_MERGE);
+            $allow($autoMerge && $detail->subject !== '' && Payload::bool($target, 'viewerCanDisableAutoMerge'), ItemAction::DISABLE_AUTO_MERGE);
+            $allow(
+                $detail->subject !== '' && Payload::bool($target, 'viewerCanUpdateBranch') && Payload::string($target, 'mergeStateStatus') === 'BEHIND',
+                ItemAction::UPDATE_BRANCH
+            );
+            $canUpdate = $detail->subject !== '' && Payload::bool($target, 'viewerCanUpdate');
+            $allow($canUpdate && $detail->draft, ItemAction::MARK_READY);
+            $allow($canUpdate && !$detail->draft, ItemAction::MARK_DRAFT);
         }
+        $allow(
+            $isPullRequest && !$open && ($detail->merge->branchRef ?? '') !== '' && Payload::bool($target, 'viewerCanDeleteHeadRef'),
+            ItemAction::DELETE_BRANCH
+        );
         $allow($detail->reference->todoId !== '', ItemAction::MARK_DONE);
         $allow($detail->anyTimeline('canEdit'), ItemAction::EDIT_COMMENT);
         $allow($detail->anyTimeline('canDelete'), ItemAction::DELETE_COMMENT);
@@ -538,6 +586,50 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
             $this->reactions($node),
             Payload::string($node, 'id'),
             Payload::bool($node, 'viewerCanReact'),
+        );
+    }
+
+    /**
+     * @param array<mixed> $target the pull request
+     * @param array<mixed> $repository
+     */
+    private function mergeState(array $target, array $repository): MergeState
+    {
+        $pipeline = self::CHECK_STATES[Payload::string($target, 'statusCheckRollup', 'state')] ?? '';
+        $decision = strtolower(Payload::string($target, 'reviewDecision'));
+        $blockers = match (Payload::string($target, 'mergeStateStatus')) {
+            'DIRTY' => ['conflict'],
+            'DRAFT' => ['draft_status'],
+            'BEHIND' => ['need_rebase'],
+            // Blocked by branch protection: name what we know, else just "blocked".
+            'BLOCKED' => array_values(array_filter([
+                $decision === 'changes_requested' ? 'requested_changes' : '',
+                $decision === 'review_required' ? 'not_approved' : '',
+                $pipeline === 'failed' ? 'ci_must_pass' : '',
+                $pipeline === 'pending' ? 'ci_still_running' : '',
+            ])) ?: ['merge_request_blocked'],
+            default => [],
+        };
+        $allowed = [
+            'merge' => Payload::bool($repository, 'mergeCommitAllowed'),
+            'squash' => Payload::bool($repository, 'squashMergeAllowed'),
+            'rebase' => Payload::bool($repository, 'rebaseMergeAllowed'),
+        ];
+        // The user's default first: the form preselects it.
+        $default = strtolower(Payload::string($repository, 'viewerDefaultMergeMethod'));
+        $methods = array_keys(array_filter($allowed));
+        usort($methods, static fn(string $a, string $b): int => ($b === $default) <=> ($a === $default));
+        $sha = Payload::string($target, 'headRefOid');
+        return new MergeState(
+            pipeline: $pipeline,
+            pipelineUrl: $pipeline !== '' && Payload::url($target, 'url') !== '' ? Payload::url($target, 'url') . '/checks' : '',
+            reviewDecision: in_array($decision, ['approved', 'changes_requested', 'review_required'], true) ? $decision : '',
+            blockers: $blockers,
+            methods: $methods,
+            deleteBranch: Payload::bool($repository, 'deleteBranchOnMerge'),
+            autoMerge: Payload::array($target, 'autoMergeRequest') !== [],
+            headSha: preg_match('/^[0-9a-f]{40,64}$/', $sha) === 1 ? $sha : '',
+            branchRef: Payload::string($target, 'headRef', 'id'),
         );
     }
 

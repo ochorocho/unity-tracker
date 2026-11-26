@@ -58,7 +58,7 @@ final class GitLabDetailProviderTest extends UnitTestCase
         self::assertSame([
             ItemAction::COMMENT, ItemAction::EDIT, ItemAction::CLOSE, ItemAction::ASSIGN_ME, ItemAction::ADD_LABEL,
             ItemAction::REMOVE_LABEL, ItemAction::ADD_ASSIGNEE, ItemAction::REMOVE_ASSIGNEE, ItemAction::SET_MILESTONE, ItemAction::LOCK,
-            ItemAction::ADD_REVIEWER, ItemAction::REMOVE_REVIEWER, ItemAction::UNSUBSCRIBE, ItemAction::APPROVE, ItemAction::MERGE, ItemAction::MARK_DONE, ItemAction::EDIT_COMMENT,
+            ItemAction::ADD_REVIEWER, ItemAction::REMOVE_REVIEWER, ItemAction::UNSUBSCRIBE, ItemAction::APPROVE, ItemAction::MERGE, ItemAction::UPDATE_BRANCH, ItemAction::MARK_DRAFT, ItemAction::MARK_DONE, ItemAction::EDIT_COMMENT,
             ItemAction::DELETE_COMMENT, ItemAction::REPLY, ItemAction::RESOLVE, ItemAction::UNRESOLVE, ItemAction::REACT, ItemAction::TOGGLE_TASK,
         ], $detail->actions);
     }
@@ -121,6 +121,40 @@ final class GitLabDetailProviderTest extends UnitTestCase
         self::assertSame([ItemAction::COMMENT, ItemAction::REOPEN, ItemAction::SUBSCRIBE, ItemAction::REACT], $detail->actions);
         self::assertSame(['2026-12-24', true, true], [$detail->dueDate, $detail->confidential, $detail->locked]);
         self::assertSame(['id' => '', 'title' => ''], $detail->milestone);
+    }
+
+    #[Test]
+    public function mergeStateIsParsed(): void
+    {
+        $merge = $this->parse('merge_request', 'GitLab/graphql_merge_request.json')->merge;
+
+        self::assertNotNull($merge);
+        self::assertSame(['failed', 'Failed', 'https://gitlab.com/acme/app/-/pipelines/77'], [$merge->pipeline, $merge->pipelineText, $merge->pipelineUrl]);
+        self::assertSame([2, 1, 1], [$merge->approvalsRequired, $merge->approvalsLeft, $merge->getApprovalsGiven()]);
+        self::assertSame(['ci_must_pass', 'not_approved'], $merge->blockers, 'failed checks only');
+        self::assertSame([true, false], [$merge->squash, $merge->squashLocked]);
+        self::assertTrue($merge->deleteBranch, 'the project default applies');
+        self::assertSame(str_repeat('b', 40), $merge->headSha);
+        self::assertNull($this->parse('issue', 'GitLab/graphql_issue_closed.json', todo: '')->merge);
+    }
+
+    #[Test]
+    public function mergeSendsTheChosenOptionsAndTheCommit(): void
+    {
+        $detail = $this->parse('merge_request', 'GitLab/graphql_merge_request.json');
+        $connection = Fixture::connection(Provider::GitLab);
+        $options = ['method' => '', 'squash' => '', 'deleteBranch' => '1', 'sha' => str_repeat('b', 40)];
+
+        $merge = $this->subject->actionRequest($detail, ItemAction::MERGE, $options, $connection);
+        self::assertSame(['sha' => str_repeat('b', 40), 'should_remove_source_branch' => true, 'squash' => false], json_decode((string)$merge->getBody(), true));
+        $auto = json_decode((string)$this->subject->actionRequest($detail, ItemAction::ENABLE_AUTO_MERGE, $options, $connection)->getBody(), true);
+        self::assertStringContainsString('strategy: MERGE_WHEN_CHECKS_PASS', $auto['query']);
+        self::assertSame(['path' => 'acme/app', 'iid' => '12', 'sha' => str_repeat('b', 40), 'squash' => false, 'remove' => true], $auto['variables']);
+        $rebase = $this->subject->actionRequest($detail, ItemAction::UPDATE_BRANCH, [], $connection);
+        self::assertSame('PUT https://gitlab.com/api/v4/projects/acme%2Fapp/merge_requests/12/rebase', $rebase->getMethod() . ' ' . $rebase->getUri());
+        $draft = json_decode((string)$this->subject->actionRequest($detail, ItemAction::MARK_DRAFT, [], $connection)->getBody(), true);
+        self::assertStringContainsString('mergeRequestSetDraft(', $draft['query']);
+        self::assertTrue($draft['variables']['value']);
     }
 
     #[Test]

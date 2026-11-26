@@ -24,6 +24,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  * Discussions: jane's comment, tester's comment, a system note and jane's unresolved diff thread.
  * One older page (cursor OLDER) holds a system note. Award emoji: jane's 👍 on the merge request and 🎉 on her comment.
  * Sidebar: no assignees, reviewer jane, milestone "v1.0" of "v1.0"/"v1.1", unlocked, tester subscribed.
+ * Merge: the pipeline is running (so only auto-merge is possible), not a draft.
  */
 final class FakeGitLab
 {
@@ -80,6 +81,7 @@ final class FakeGitLab
             $method === 'DELETE' && preg_match('#^' . self::MR . '/notes/(\d+)$#', $path, $matches) === 1
                 => $this->deleteNote($state, (int)$matches[1]),
             $method === 'PUT' && $path === self::MR => $this->editMergeRequest($state, $body),
+            $method === 'POST' && $path === self::MR . '/cancel_merge_when_pipeline_succeeds' => $this->cancelAutoMerge($state),
             default => null,
         };
         return $response === null
@@ -88,7 +90,7 @@ final class FakeGitLab
     }
 
     /**
-     * @return array{title: string, description: string, discussions: list<array{id: string, resolvable: bool, resolved: bool, notes: list<array{id: int, author: string, body: string, system?: bool, path?: string}>}>, awards: array<string, list<array{name: string, user: string}>>, assignees: list<string>, reviewers: list<string>, milestone: int, locked: bool, subscribed: bool}
+     * @return array{title: string, description: string, discussions: list<array{id: string, resolvable: bool, resolved: bool, notes: list<array{id: int, author: string, body: string, system?: bool, path?: string}>}>, awards: array<string, list<array{name: string, user: string}>>, assignees: list<string>, reviewers: list<string>, milestone: int, locked: bool, subscribed: bool, draft: bool, autoMerge: bool}
      */
     private function state(): array
     {
@@ -107,6 +109,8 @@ final class FakeGitLab
             'milestone' => 1,
             'locked' => false,
             'subscribed' => true,
+            'draft' => false,
+            'autoMerge' => false,
             // awardable id → awards
             'awards' => [
                 self::MR_ID => [['name' => 'thumbsup', 'user' => 'jane']],
@@ -121,6 +125,16 @@ final class FakeGitLab
     private function save(array $state): void
     {
         GeneralUtility::makeInstance(Registry::class)->set(self::NAMESPACE, 'state', $state);
+    }
+
+    /**
+     * @param array<string, mixed> $state
+     * @return array<string, mixed>
+     */
+    private function cancelAutoMerge(array $state): array
+    {
+        $this->save(['autoMerge' => false] + $state);
+        return ['iid' => 12];
     }
 
     /**
@@ -167,7 +181,11 @@ final class FakeGitLab
             return ['data' => ['awardEmojiToggle' => ['errors' => []]]];
         }
         $query = (string)($body['query'] ?? '');
-        if (preg_match('/mergeRequestSet(Assignees|Reviewers|Locked|Subscription)\(/', $query, $set) === 1) {
+        if (str_contains($query, 'mergeRequestAccept(')) {
+            $this->save(['autoMerge' => true] + $state);
+            return ['data' => ['mergeRequestAccept' => ['errors' => []]]];
+        }
+        if (preg_match('/mergeRequestSet(Assignees|Reviewers|Locked|Subscription|Draft)\(/', $query, $set) === 1) {
             $value = $body['variables']['value'] ?? null;
             if (in_array($set[1], ['Assignees', 'Reviewers'], true)) {
                 $key = strtolower($set[1]);
@@ -176,7 +194,7 @@ final class FakeGitLab
                     ? array_values(array_diff($state[$key], $users))
                     : array_values(array_unique([...$state[$key], ...$users]));
             } else {
-                $state[$set[1] === 'Locked' ? 'locked' : 'subscribed'] = (bool)$value;
+                $state[['Locked' => 'locked', 'Subscription' => 'subscribed', 'Draft' => 'draft'][$set[1]]] = (bool)$value;
             }
             $this->save($state);
             return ['data' => ['result' => ['errors' => []]]];
@@ -243,15 +261,31 @@ final class FakeGitLab
                         'pageInfo' => ['hasPreviousPage' => !$older, 'startCursor' => $older ? null : self::OLDER],
                         'nodes' => $discussions,
                     ],
-                    'draft' => false,
+                    'draft' => $state['draft'],
                     'sourceBranch' => 'fix/login',
                     'targetBranch' => 'main',
-                    'detailedMergeStatus' => 'mergeable',
-                    'mergeable' => true,
+                    'detailedMergeStatus' => $state['draft'] ? 'DRAFT_STATUS' : 'CI_STILL_RUNNING',
+                    'mergeable' => false,
+                    'mergeabilityChecks' => [
+                        ['identifier' => 'CI_MUST_PASS', 'status' => 'FAILED'],
+                        ['identifier' => 'DRAFT_STATUS', 'status' => $state['draft'] ? 'FAILED' : 'SUCCESS'],
+                    ],
+                    'headPipeline' => ['status' => 'RUNNING', 'path' => '/acme/app/-/pipelines/7', 'detailedStatus' => ['text' => 'Running']],
+                    'diffHeadSha' => str_repeat('c', 40),
+                    'squashOnMerge' => false,
+                    'squashReadOnly' => false,
+                    'forceRemoveSourceBranch' => false,
+                    'shouldRemoveSourceBranch' => true,
+                    'autoMergeEnabled' => $state['autoMerge'],
+                    'availableAutoMergeStrategies' => ['MERGE_WHEN_CHECKS_PASS'],
+                    'shouldBeRebased' => false,
+                    'rebaseInProgress' => false,
+                    'approvalsRequired' => 0,
+                    'approvalsLeft' => 0,
                     'approvedBy' => ['nodes' => []],
                     'awardEmoji' => $awards(self::MR_ID),
                     'userPermissions' => [
-                        'readMergeRequest' => true, 'updateMergeRequest' => true, 'createNote' => true, 'canMerge' => true, 'canApprove' => true, 'adminMergeRequest' => true,
+                        'readMergeRequest' => true, 'updateMergeRequest' => true, 'pushToSourceBranch' => true, 'removeSourceBranch' => true, 'createNote' => true, 'canMerge' => true, 'canApprove' => true, 'adminMergeRequest' => true,
                     ],
                 ],
             ],

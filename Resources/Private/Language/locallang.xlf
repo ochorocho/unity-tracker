@@ -539,6 +539,162 @@
 			<trans-unit id="item.done.toggleTask" resname="item.done.toggleTask">
 				<source>Task list updated.</source>
 			</trans-unit>
+			<trans-unit id="item.checks.success" resname="item.checks.success">
+				<source>Checks passed</source>
+			</trans-unit>
+			<trans-unit id="item.checks.failed" resname="item.checks.failed">
+				<source>Checks failed</source>
+			</trans-unit>
+			<trans-unit id="item.checks.running" resname="item.checks.running">
+				<source>Checks running</source>
+			</trans-unit>
+			<trans-unit id="item.checks.pending" resname="item.checks.pending">
+				<source>Checks pending</source>
+			</trans-unit>
+			<trans-unit id="item.checks.canceled" resname="item.checks.canceled">
+				<source>Checks canceled</source>
+			</trans-unit>
+			<trans-unit id="item.checks.skipped" resname="item.checks.skipped">
+				<source>Checks skipped</source>
+			</trans-unit>
+			<trans-unit id="item.checks.manual" resname="item.checks.manual">
+				<source>Checks wait for a manual job</source>
+			</trans-unit>
+			<trans-unit id="item.checks.details" resname="item.checks.details">
+				<source>Details</source>
+			</trans-unit>
+			<trans-unit id="item.approvals" resname="item.approvals">
+				<source>Approvals: %1$s of %2$s</source>
+			</trans-unit>
+			<trans-unit id="item.reviewDecision.approved" resname="item.reviewDecision.approved">
+				<source>Approved</source>
+			</trans-unit>
+			<trans-unit id="item.reviewDecision.changes_requested" resname="item.reviewDecision.changes_requested">
+				<source>Changes requested</source>
+			</trans-unit>
+			<trans-unit id="item.reviewDecision.review_required" resname="item.reviewDecision.review_required">
+				<source>Review required</source>
+			</trans-unit>
+			<trans-unit id="item.blocked" resname="item.blocked">
+				<source>Cannot be merged yet:</source>
+			</trans-unit>
+			<trans-unit id="item.blocker.conflict" resname="item.blocker.conflict">
+				<source>Merge conflicts</source>
+			</trans-unit>
+			<trans-unit id="item.blocker.draft_status" resname="item.blocker.draft_status">
+				<source>It is a draft</source>
+			</trans-unit>
+			<trans-unit id="item.blocker.need_rebase" resname="item.blocker.need_rebase">
+				<source>The branch is behind the target branch</source>
+			</trans-unit>
+			<trans-unit id="item.blocker.not_approved" resname="item.blocker.not_approved">
+				<source>Approvals are missing</source>
+			</trans-unit>
+			<trans-unit id="item.blocker.requested_changes" resname="item.blocker.requested_changes">
+				<source>Changes were requested</source>
+			</trans-unit>
+			<trans-unit id="item.blocker.ci_must_pass" resname="item.blocker.ci_must_pass">
+				<source>The pipeline/checks must pass</source>
+			</trans-unit>
+			<trans-unit id="item.blocker.ci_still_running" resname="item.blocker.ci_still_running">
+				<source>The pipeline/checks are still running</source>
+			</trans-unit>
+			<trans-unit id="item.blocker.discussions_not_resolved" resname="item.blocker.discussions_not_resolved">
+				<source>Threads are unresolved</source>
+			</trans-unit>
+			<trans-unit id="item.blocker.merge_request_blocked" resname="item.blocker.merge_request_blocked">
+				<source>Blocked (by a dependency or branch protection)</source>
+			</trans-unit>
+			<trans-unit id="item.blocker.not_open" resname="item.blocker.not_open">
+				<source>It is not open</source>
+			</trans-unit>
+			<trans-unit id="item.blocker.status_checks_must_pass" resname="item.blocker.status_checks_must_pass">
+				<source>External status checks must pass</source>
+			</trans-unit>
+			<trans-unit id="item.blocker.merge_time" resname="item.blocker.merge_time">
+				<source>The merge time is not reached yet</source>
+			</trans-unit>
+			<trans-unit id="item.blocker.title_regex" resname="item.blocker.title_regex">
+				<source>The title does not match the required pattern</source>
+			</trans-unit>
+			<trans-unit id="item.blocker.checking" resname="item.blocker.checking">
+				<source>Mergeability is being checked</source>
+			</trans-unit>
+			<trans-unit id="item.blocker.unchecked" resname="item.blocker.unchecked">
+				<source>Mergeability is not checked yet</source>
+			</trans-unit>
+			<trans-unit id="item.blocker.preparing" resname="item.blocker.preparing">
+				<source>The merge request is being prepared</source>
+			</trans-unit>
+			<trans-unit id="item.autoMergeEnabled" resname="item.autoMergeEnabled">
+				<source>Merges automatically when the checks pass.</source>
+			</trans-unit>
+			<trans-unit id="item.field.mergeMethod" resname="item.field.mergeMethod">
+				<source>Merge method</source>
+			</trans-unit>
+			<trans-unit id="item.mergeMethod.merge" resname="item.mergeMethod.merge">
+				<source>Create a merge commit</source>
+			</trans-unit>
+			<trans-unit id="item.mergeMethod.squash" resname="item.mergeMethod.squash">
+				<source>Squash and merge</source>
+			</trans-unit>
+			<trans-unit id="item.mergeMethod.rebase" resname="item.mergeMethod.rebase">
+				<source>Rebase and merge</source>
+			</trans-unit>
+			<trans-unit id="item.field.squash" resname="item.field.squash">
+				<source>Squash commits</source>
+			</trans-unit>
+			<trans-unit id="item.field.deleteBranch" resname="item.field.deleteBranch">
+				<source>Delete source branch</source>
+			</trans-unit>
+			<trans-unit id="item.branchDeletedOnMerge" resname="item.branchDeletedOnMerge">
+				<source>The branch is deleted after merging (repository setting).</source>
+			</trans-unit>
+			<trans-unit id="item.action.enableAutoMerge" resname="item.action.enableAutoMerge">
+				<source>Merge when checks pass</source>
+			</trans-unit>
+			<trans-unit id="item.action.disableAutoMerge" resname="item.action.disableAutoMerge">
+				<source>Cancel auto-merge</source>
+			</trans-unit>
+			<trans-unit id="item.action.updateBranch" resname="item.action.updateBranch">
+				<source>Update branch (rebase)</source>
+			</trans-unit>
+			<trans-unit id="item.action.markReady" resname="item.action.markReady">
+				<source>Mark as ready</source>
+			</trans-unit>
+			<trans-unit id="item.action.markDraft" resname="item.action.markDraft">
+				<source>Mark as draft</source>
+			</trans-unit>
+			<trans-unit id="item.action.deleteBranch" resname="item.action.deleteBranch">
+				<source>Delete branch</source>
+			</trans-unit>
+			<trans-unit id="item.confirm.deleteBranch" resname="item.confirm.deleteBranch">
+				<source>Delete branch %s?</source>
+			</trans-unit>
+			<trans-unit id="item.action.closeNotPlanned" resname="item.action.closeNotPlanned">
+				<source>Close as not planned</source>
+			</trans-unit>
+			<trans-unit id="item.done.enableAutoMerge" resname="item.done.enableAutoMerge">
+				<source>Auto-merge enabled.</source>
+			</trans-unit>
+			<trans-unit id="item.done.disableAutoMerge" resname="item.done.disableAutoMerge">
+				<source>Auto-merge canceled.</source>
+			</trans-unit>
+			<trans-unit id="item.done.updateBranch" resname="item.done.updateBranch">
+				<source>Branch update started.</source>
+			</trans-unit>
+			<trans-unit id="item.done.markReady" resname="item.done.markReady">
+				<source>Marked as ready.</source>
+			</trans-unit>
+			<trans-unit id="item.done.markDraft" resname="item.done.markDraft">
+				<source>Marked as draft.</source>
+			</trans-unit>
+			<trans-unit id="item.done.deleteBranch" resname="item.done.deleteBranch">
+				<source>Branch deleted.</source>
+			</trans-unit>
+			<trans-unit id="item.done.closeNotPlanned" resname="item.done.closeNotPlanned">
+				<source>Closed as not planned.</source>
+			</trans-unit>
 			<trans-unit id="item.reviewers" resname="item.reviewers">
 				<source>Reviewers</source>
 			</trans-unit>

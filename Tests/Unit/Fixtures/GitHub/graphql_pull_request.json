@@ -319,7 +319,20 @@
               }
             }
           ]
-        }
+        },
+        "mergeStateStatus": "BLOCKED",
+        "headRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "headRef": {
+          "id": "REF_1"
+        },
+        "statusCheckRollup": {
+          "state": "FAILURE"
+        },
+        "autoMergeRequest": null,
+        "viewerCanDeleteHeadRef": true,
+        "viewerCanUpdateBranch": true,
+        "viewerCanEnableAutoMerge": true,
+        "viewerCanDisableAutoMerge": false
       },
       "milestones": {
         "nodes": [
@@ -332,7 +345,12 @@
             "title": "Sprint 4"
           }
         ]
-      }
+      },
+      "mergeCommitAllowed": true,
+      "squashMergeAllowed": true,
+      "rebaseMergeAllowed": false,
+      "deleteBranchOnMerge": true,
+      "viewerDefaultMergeMethod": "SQUASH"
     }
   }
 }

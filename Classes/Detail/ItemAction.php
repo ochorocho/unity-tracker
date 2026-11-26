@@ -50,13 +50,25 @@ final class ItemAction
     public const UNLOCK = 'unlock';
     public const SUBSCRIBE = 'subscribe';
     public const UNSUBSCRIBE = 'unsubscribe';
+    /** Merge widget, see MergeState. MERGE and ENABLE_AUTO_MERGE take "squash", "deleteBranch" and (GitHub) "method". */
+    public const ENABLE_AUTO_MERGE = 'enableAutoMerge';
+    public const DISABLE_AUTO_MERGE = 'disableAutoMerge';
+    /** GitLab: rebase, GitHub: update branch (merge the base branch in) */
+    public const UPDATE_BRANCH = 'updateBranch';
+    public const MARK_READY = 'markReady';
+    public const MARK_DRAFT = 'markDraft';
+    /** GitHub: the branch of a merged/closed pull request */
+    public const DELETE_BRANCH = 'deleteBranch';
+    /** GitHub issues: close as "not planned" (CLOSE is "completed") */
+    public const CLOSE_NOT_PLANNED = 'closeNotPlanned';
 
     public const ALL = [
         self::COMMENT, self::EDIT, self::CLOSE, self::REOPEN, self::ASSIGN_ME, self::UNASSIGN_ME, self::ADD_LABEL,
         self::REMOVE_LABEL, self::APPROVE, self::UNAPPROVE, self::REQUEST_CHANGES, self::MERGE, self::MARK_DONE,
         self::EDIT_COMMENT, self::DELETE_COMMENT, self::REPLY, self::RESOLVE, self::UNRESOLVE, self::REACT, self::TOGGLE_TASK,
         self::ADD_ASSIGNEE, self::REMOVE_ASSIGNEE, self::ADD_REVIEWER, self::REMOVE_REVIEWER, self::SET_MILESTONE, self::SET_DUE_DATE,
-        self::SET_CONFIDENTIAL, self::LOCK, self::UNLOCK, self::SUBSCRIBE, self::UNSUBSCRIBE,
+        self::SET_CONFIDENTIAL, self::LOCK, self::UNLOCK, self::SUBSCRIBE, self::UNSUBSCRIBE, self::ENABLE_AUTO_MERGE,
+        self::DISABLE_AUTO_MERGE, self::UPDATE_BRANCH, self::MARK_READY, self::MARK_DRAFT, self::DELETE_BRANCH, self::CLOSE_NOT_PLANNED,
     ];
 
     public const MAX_COMMENT = 65536;

@@ -1,0 +1,106 @@
+<html
+    xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+    data-namespace-typo3-fluid="true"
+>
+<f:comment>
+    Merge widget of merge/pull requests (Detail\MergeState): checks, approvals, what blocks the merge, merge options.
+</f:comment>
+<section class="card mb-3" data-merge-widget>
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <f:if condition="{detail.merge.pipeline}">
+                <span class="badge badge-{detail.merge.pipelineBadge}" data-pipeline="{detail.merge.pipeline}">
+                    <f:translate key="item.checks.{detail.merge.pipeline}" extensionName="UnityTracker" />
+                </span>
+                <f:if condition="{detail.merge.pipelineUrl}">
+                    <a href="{detail.merge.pipelineUrl}" target="_blank" rel="noopener noreferrer"><f:translate key="item.checks.details" extensionName="UnityTracker" /></a>
+                </f:if>
+            </f:if>
+            <f:if condition="{detail.merge.approvalsRequired}">
+                <span data-approvals><f:translate key="item.approvals" extensionName="UnityTracker" arguments="{0: detail.merge.approvalsGiven, 1: detail.merge.approvalsRequired}" /></span>
+            </f:if>
+            <f:if condition="{detail.merge.reviewDecision}">
+                <span data-review-decision><f:translate key="item.reviewDecision.{detail.merge.reviewDecision}" extensionName="UnityTracker" /></span>
+            </f:if>
+        </div>
+
+        <f:if condition="{detail.merge.blockers} && {detail.state} == 'open'">
+            <div class="mb-2" data-merge-blockers>
+                <strong><f:translate key="item.blocked" extensionName="UnityTracker" /></strong>
+                <ul class="mb-0">
+                    <f:for each="{detail.merge.blockers}" as="blocker">
+                        <li data-blocker="{blocker}"><f:translate key="item.blocker.{blocker}" extensionName="UnityTracker" default="{blocker}" /></li>
+                    </f:for>
+                </ul>
+            </div>
+        </f:if>
+
+        <f:if condition="{detail.merge.autoMerge}">
+            <p class="mb-2" data-auto-merge><f:translate key="item.autoMergeEnabled" extensionName="UnityTracker" /></p>
+        </f:if>
+
+        <f:if condition="{can.merge} || {can.enableAutoMerge}">
+            <form method="post" action="{actionUri}" class="d-flex flex-wrap align-items-center gap-3 mb-2" data-item-form data-merge-form>
+                <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+                <f:if condition="{detail.merge.methods}">
+                    <select class="form-select form-select-sm w-auto" name="method" aria-label="{f:translate(key: 'item.field.mergeMethod', extensionName: 'UnityTracker')}">
+                        <f:for each="{detail.merge.methods}" as="method"><option value="{method}"><f:translate key="item.mergeMethod.{method}" extensionName="UnityTracker" /></option></f:for>
+                    </select>
+                </f:if>
+                <f:if condition="!{detail.merge.methods}">
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" name="squash" value="1" id="unitytracker-squash"
+                            {f:if(condition: detail.merge.squash, then: 'checked')} {f:if(condition: detail.merge.squashLocked, then: 'disabled')} />
+                        <label class="form-check-label" for="unitytracker-squash"><f:translate key="item.field.squash" extensionName="UnityTracker" /></label>
+                    </div>
+                    <f:if condition="{detail.merge.canDeleteBranch}">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" name="deleteBranch" value="1" id="unitytracker-delete-branch"
+                                {f:if(condition: detail.merge.deleteBranch, then: 'checked')} />
+                            <label class="form-check-label" for="unitytracker-delete-branch"><f:translate key="item.field.deleteBranch" extensionName="UnityTracker" /></label>
+                        </div>
+                    </f:if>
+                </f:if>
+                <f:if condition="{detail.merge.methods} && {detail.merge.deleteBranch}">
+                    <span class="small"><f:translate key="item.branchDeletedOnMerge" extensionName="UnityTracker" /></span>
+                </f:if>
+                <span class="d-flex gap-2">
+                    <f:if condition="{can.merge}">
+                        <button class="btn btn-primary t3js-modal-trigger" type="submit" name="action" value="merge"
+                            data-title="{f:translate(key: 'item.action.merge', extensionName: 'UnityTracker')}"
+                            data-content="{f:translate(key: 'item.confirm.merge', extensionName: 'UnityTracker', arguments: {0: detail.sourceBranch, 1: detail.targetBranch})}"
+                            data-bs-content="{f:translate(key: 'item.confirm.merge', extensionName: 'UnityTracker', arguments: {0: detail.sourceBranch, 1: detail.targetBranch})}"
+                            data-severity="warning"
+                            data-button-ok-text="{f:translate(key: 'item.action.merge', extensionName: 'UnityTracker')}">
+                            <f:translate key="item.action.merge" extensionName="UnityTracker" />
+                        </button>
+                    </f:if>
+                    <f:if condition="{can.enableAutoMerge}">
+                        <button class="btn btn-default" name="action" value="enableAutoMerge"><f:translate key="item.action.enableAutoMerge" extensionName="UnityTracker" /></button>
+                    </f:if>
+                </span>
+            </form>
+        </f:if>
+
+        <f:if condition="{can.disableAutoMerge} || {can.updateBranch} || {can.markReady} || {can.markDraft} || {can.deleteBranch}">
+            <form method="post" action="{actionUri}" class="d-flex flex-wrap gap-2" data-item-form>
+                <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+                <f:if condition="{can.disableAutoMerge}"><button class="btn btn-default btn-sm" name="action" value="disableAutoMerge"><f:translate key="item.action.disableAutoMerge" extensionName="UnityTracker" /></button></f:if>
+                <f:if condition="{can.updateBranch}"><button class="btn btn-default btn-sm" name="action" value="updateBranch"><f:translate key="item.action.updateBranch" extensionName="UnityTracker" /></button></f:if>
+                <f:if condition="{can.markReady}"><button class="btn btn-default btn-sm" name="action" value="markReady"><f:translate key="item.action.markReady" extensionName="UnityTracker" /></button></f:if>
+                <f:if condition="{can.markDraft}"><button class="btn btn-default btn-sm" name="action" value="markDraft"><f:translate key="item.action.markDraft" extensionName="UnityTracker" /></button></f:if>
+                <f:if condition="{can.deleteBranch}">
+                    <button class="btn btn-default btn-sm t3js-modal-trigger" type="submit" name="action" value="deleteBranch"
+                        data-title="{f:translate(key: 'item.action.deleteBranch', extensionName: 'UnityTracker')}"
+                        data-content="{f:translate(key: 'item.confirm.deleteBranch', extensionName: 'UnityTracker', arguments: {0: detail.sourceBranch})}"
+                        data-bs-content="{f:translate(key: 'item.confirm.deleteBranch', extensionName: 'UnityTracker', arguments: {0: detail.sourceBranch})}"
+                        data-severity="warning"
+                        data-button-ok-text="{f:translate(key: 'item.action.deleteBranch', extensionName: 'UnityTracker')}">
+                        <f:translate key="item.action.deleteBranch" extensionName="UnityTracker" />
+                    </button>
+                </f:if>
+            </form>
+        </f:if>
+    </div>
+</section>
+</html>

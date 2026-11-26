@@ -267,12 +267,23 @@ final class ItemDetailServiceTest extends UnitTestCase
     }
 
     #[Test]
+    public function mergeUsesAnAllowedMethodAndTheCommitTheUserSaw(): void
+    {
+        $this->subject()->perform($this->reference(), Fixture::connection(Provider::GitHub), ItemAction::MERGE, ['method' => 'squash', 'sha' => 'ignored']);
+
+        self::assertSame(['merge_method' => 'squash', 'sha' => str_repeat('a', 40)], $this->bodies[1]);
+
+        $this->expectException(InvalidActionException::class);
+        $this->subject()->perform($this->reference(), Fixture::connection(Provider::GitHub), ItemAction::MERGE, ['method' => 'rebase']);
+    }
+
+    #[Test]
     public function apiMessageIsPartOfTheError(): void
     {
         $this->actionResponse = new Response(405, [], '{"message": "Pull Request is not mergeable"}');
 
         try {
-            $this->subject()->perform($this->reference(), Fixture::connection(Provider::GitHub), ItemAction::MERGE, []);
+            $this->subject()->perform($this->reference(), Fixture::connection(Provider::GitHub), ItemAction::MERGE, ['method' => 'squash']);
             self::fail('Expected FetchFailedException');
         } catch (FetchFailedException $exception) {
             self::assertSame('HTTP 405: Pull Request is not mergeable', $exception->error->detail);

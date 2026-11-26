@@ -36,7 +36,11 @@ The sheet offers only what the API says the token's user may do, and checks it a
 | Assign / unassign me, add / remove label | ✓ | ✓ |
 | Approve / revoke approval | merge requests | approve (pull requests) |
 | Request changes | – | pull requests |
-| Merge (with confirmation) | ✓ | ✓ |
+| Merge (with confirmation) | ✓ (squash, delete source branch) | ✓ (merge method of the repository) |
+| Auto-merge when checks pass / cancel | ✓ | ✓ |
+| Rebase / update branch, mark as draft / ready | ✓ | ✓ |
+| Delete the branch of a merged pull request | – (option of the merge) | ✓ |
+| Close as not planned | – | issues |
 | Mark to-do done / notification read | to-dos | notifications |
 | Edit / delete own comments | ✓ | ✓ (submitted reviews: edit only) |
 | Reply to a thread | discussions | review threads |
@@ -58,7 +62,9 @@ when the sheet is closed. Title, description and your own comments are edited in
 are resolved through GraphQL mutations (no REST endpoint), GitLab threads through `discussionToggleResolve`.
 Reactions are GraphQL mutations as well (`awardEmojiToggle`, `addReaction`/`removeReaction`). The sidebar
 (assignees, reviewers, labels, milestone, due date, confidentiality, lock, notifications, participants) sits
-beside the description and activity on wide sheets.
+beside the description and activity on wide sheets. Merge and pull requests get a merge widget: pipeline/checks,
+approvals or review decision, what blocks the merge (GitLab's mergeability checks, GitHub's merge state) and the
+merge options. Merging sends the commit the sheet showed, so a branch that moved on is not merged unseen.
 
 Images in descriptions and comments are loaded by TYPO3 and served from the backend (route
 `itemImage`): the backend's Content-Security-Policy blocks other origins, and uploads of non-public

@@ -248,6 +248,20 @@ final readonly class ItemDetailService
                     throw new InvalidActionException('notAllowed', 1764240417);
                 }
                 return ['confidential' => $confidential ? '1' : ''];
+            case ItemAction::MERGE:
+            case ItemAction::ENABLE_AUTO_MERGE:
+                $methods = $detail->merge->methods ?? [];
+                $method = $text('method');
+                if ($methods === [] ? $method !== '' : !in_array($method, $methods, true)) {
+                    throw new InvalidActionException('notAllowed', 1764240418);
+                }
+                return [
+                    'method' => $method,
+                    'squash' => $text('squash') === '1' ? '1' : '',
+                    'deleteBranch' => $text('deleteBranch') === '1' ? '1' : '',
+                    // The commit the user saw: GitLab and GitHub refuse to merge if the branch moved on.
+                    'sha' => $detail->merge->headSha ?? '',
+                ];
             case ItemAction::APPROVE:
                 return ['body' => mb_substr($text('body'), 0, ItemAction::MAX_COMMENT)];
             case ItemAction::EDIT:
