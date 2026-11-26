@@ -242,7 +242,49 @@
               }
             }
           ]
+        },
+        "milestone": {
+          "id": "gid://gitlab/Milestone/31",
+          "title": "v2.0"
+        },
+        "participants": {
+          "nodes": [
+            {
+              "username": "jane"
+            },
+            {
+              "username": "joe"
+            },
+            {
+              "username": "me"
+            }
+          ]
+        },
+        "subscribed": true,
+        "discussionLocked": false,
+        "reviewers": {
+          "nodes": [
+            {
+              "username": "ann"
+            }
+          ]
         }
+      },
+      "milestones": {
+        "nodes": [
+          {
+            "id": "gid://gitlab/Milestone/31",
+            "title": "v2.0"
+          },
+          {
+            "id": "gid://gitlab/Milestone/32",
+            "title": "v2.1"
+          },
+          {
+            "id": "bad",
+            "title": "x"
+          }
+        ]
       }
     }
   }

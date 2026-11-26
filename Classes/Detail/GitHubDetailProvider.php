@@ -28,9 +28,11 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
           repository(owner: $owner, name: $name) {
             viewerPermission
             labels(first: 100) { nodes { name color } }
+            milestones(first: 50, states: OPEN) { nodes { number title } }
             target: issueOrPullRequest(number: $number) {
               ... on Issue {
                 %1$s
+                viewerCanSetMilestone
                 issueTimeline: timelineItems(last: 40, before: $before, itemTypes: [%2$s]) {
                   pageInfo { hasPreviousPage startCursor }
                   nodes { __typename %3$s }
@@ -52,6 +54,8 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
                   }
                 }
                 isDraft merged mergeable baseRefName headRefName reviewDecision
+                reviewRequests(first: 20) { nodes { requestedReviewer { ... on User { login } ... on Bot { login } } } }
+                latestReviews(first: 20) { nodes { state author { login } } }
                 viewerLatestReview { state }
               }
             }
@@ -66,6 +70,9 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
         labels(first: 50) { nodes { name color } }
         assignees(first: 20) { nodes { login } }
         viewerCanUpdate viewerDidAuthor viewerCanClose viewerCanReopen viewerCanLabel viewerCanAssign
+        milestone { number title }
+        participants(first: 30) { nodes { login } }
+        locked viewerSubscription viewerCanSubscribe
         GRAPHQL;
 
     private const ISSUE_ITEM_TYPES = 'ISSUE_COMMENT, LABELED_EVENT, UNLABELED_EVENT, ASSIGNED_EVENT, UNASSIGNED_EVENT, CLOSED_EVENT, '
@@ -131,6 +138,12 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
         mutation($id: ID!, $content: ReactionContent!) { removeReaction(input: {subjectId: $id, content: $content}) { reaction { content } } }
         GRAPHQL;
 
+    private const SUBSCRIPTION_MUTATION = <<<'GRAPHQL'
+        mutation($id: ID!, $state: SubscriptionState!) {
+          updateSubscription(input: {subscribableId: $id, state: $state}) { subscribable { viewerSubscription } }
+        }
+        GRAPHQL;
+
     private const USERS_QUERY = <<<'GRAPHQL'
         query($owner: String!, $name: String!, $search: String) {
           repository(owner: $owner, name: $name) { mentionableUsers(query: $search, first: 10) { nodes { login name } } }
@@ -138,6 +151,8 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
         GRAPHQL;
 
     private const WRITE_PERMISSIONS = ['WRITE', 'MAINTAIN', 'ADMIN'];
+    /** Triage and up may request reviews, set milestones and lock conversations */
+    private const TRIAGE_PERMISSIONS = ['TRIAGE', 'WRITE', 'MAINTAIN', 'ADMIN'];
 
     public function detailRequests(ItemReference $reference, Connection $connection, string $before = ''): array
     {
@@ -200,6 +215,18 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
             reactions: $this->reactions($target),
             subject: Payload::string($target, 'id'),
             canReact: Payload::bool($target, 'viewerCanReact'),
+            reviewers: $this->reviewers($target),
+            milestone: $this->milestone(Payload::array($target, 'milestone')),
+            availableMilestones: array_values(array_filter(
+                array_map($this->milestone(...), Payload::list($repository, 'milestones', 'nodes')),
+                static fn(array $milestone): bool => $milestone['id'] !== ''
+            )),
+            locked: Payload::bool($target, 'locked'),
+            participants: array_values(array_filter(array_map(
+                static fn(array $user): string => Payload::string($user, 'login'),
+                Payload::list($target, 'participants', 'nodes')
+            ))),
+            subscribed: Payload::string($target, 'viewerSubscription') === 'SUBSCRIBED',
         );
         $detail = $this->withActions($detail, $target, Payload::string($repository, 'viewerPermission'));
 
@@ -246,6 +273,17 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
             ItemAction::REPLY => $this->rest($connection, 'POST', $pull . '/comments/' . (int)$parameters['replyTo'] . '/replies', ['body' => $parameters['body']]),
             ItemAction::RESOLVE => $this->graphql($connection, self::RESOLVE_MUTATION, ['id' => $parameters['thread']]),
             ItemAction::UNRESOLVE => $this->graphql($connection, self::UNRESOLVE_MUTATION, ['id' => $parameters['thread']]),
+            ItemAction::ADD_ASSIGNEE => $this->rest($connection, 'POST', $issue . '/assignees', ['assignees' => [$parameters['user']]]),
+            ItemAction::REMOVE_ASSIGNEE => $this->rest($connection, 'DELETE', $issue . '/assignees', ['assignees' => [$parameters['user']]]),
+            ItemAction::ADD_REVIEWER => $this->rest($connection, 'POST', $pull . '/requested_reviewers', ['reviewers' => [$parameters['user']]]),
+            ItemAction::REMOVE_REVIEWER => $this->rest($connection, 'DELETE', $pull . '/requested_reviewers', ['reviewers' => [$parameters['user']]]),
+            ItemAction::SET_MILESTONE => $this->rest($connection, 'PATCH', $issue, ['milestone' => $parameters['milestone'] !== '' ? (int)$parameters['milestone'] : null]),
+            ItemAction::LOCK => $this->rest($connection, 'PUT', $issue . '/lock'),
+            ItemAction::UNLOCK => $this->rest($connection, 'DELETE', $issue . '/lock'),
+            ItemAction::SUBSCRIBE, ItemAction::UNSUBSCRIBE => $this->graphql($connection, self::SUBSCRIPTION_MUTATION, [
+                'id' => $detail->subject,
+                'state' => $action === ItemAction::SUBSCRIBE ? 'SUBSCRIBED' : 'UNSUBSCRIBED',
+            ]),
             ItemAction::REACT => $this->graphql(
                 $connection,
                 $parameters['remove'] !== '' ? self::REMOVE_REACTION_MUTATION : self::ADD_REACTION_MUTATION,
@@ -319,6 +357,15 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
         $allow($canAssign && !$detail->isAssignedToViewer(), ItemAction::ASSIGN_ME);
         $allow($canAssign && $detail->isAssignedToViewer(), ItemAction::UNASSIGN_ME);
         $allow(Payload::bool($target, 'viewerCanLabel'), ItemAction::ADD_LABEL, ItemAction::REMOVE_LABEL);
+        $allow($canAssign, ItemAction::ADD_ASSIGNEE, ItemAction::REMOVE_ASSIGNEE);
+        $triage = in_array($permission, self::TRIAGE_PERMISSIONS, true);
+        $allow($isPullRequest ? $triage : Payload::bool($target, 'viewerCanSetMilestone'), ItemAction::SET_MILESTONE);
+        $allow($triage && !$detail->locked, ItemAction::LOCK);
+        $allow($triage && $detail->locked, ItemAction::UNLOCK);
+        $allow($isPullRequest && $open && $triage, ItemAction::ADD_REVIEWER, ItemAction::REMOVE_REVIEWER);
+        $canSubscribe = Payload::bool($target, 'viewerCanSubscribe') && $detail->subject !== '';
+        $allow($canSubscribe && !$detail->subscribed, ItemAction::SUBSCRIBE);
+        $allow($canSubscribe && $detail->subscribed, ItemAction::UNSUBSCRIBE);
         if ($isPullRequest && $open) {
             $ownPullRequest = Payload::bool($target, 'viewerDidAuthor');
             $allow(!$ownPullRequest && !$detail->approvedByViewer, ItemAction::APPROVE);
@@ -492,6 +539,41 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
             Payload::string($node, 'id'),
             Payload::bool($node, 'viewerCanReact'),
         );
+    }
+
+    /**
+     * Requested reviewers (can be withdrawn), then those who reviewed already with their latest verdict.
+     *
+     * @param array<mixed> $target
+     * @return list<array{name: string, state: string, removable: bool}>
+     */
+    private function reviewers(array $target): array
+    {
+        $reviewers = [];
+        foreach (Payload::list($target, 'reviewRequests', 'nodes') as $request) {
+            $name = Payload::string($request, 'requestedReviewer', 'login');
+            if ($name !== '') {
+                $reviewers[$name] = ['name' => $name, 'state' => '', 'removable' => true];
+            }
+        }
+        foreach (Payload::list($target, 'latestReviews', 'nodes') as $review) {
+            $name = Payload::string($review, 'author', 'login');
+            $state = strtolower(Payload::string($review, 'state'));
+            if ($name !== '' && !isset($reviewers[$name]) && in_array($state, ['approved', 'changes_requested', 'commented', 'dismissed'], true)) {
+                $reviewers[$name] = ['name' => $name, 'state' => $state, 'removable' => false];
+            }
+        }
+        return array_values($reviewers);
+    }
+
+    /**
+     * @param array<mixed> $node
+     * @return array{id: string, title: string} id: the milestone number, "" for none
+     */
+    private function milestone(array $node): array
+    {
+        $number = Payload::int($node, 'number');
+        return $number > 0 ? ['id' => (string)$number, 'title' => Payload::string($node, 'title')] : ['id' => '', 'title' => ''];
     }
 
     /**

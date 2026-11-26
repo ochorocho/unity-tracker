@@ -539,6 +539,132 @@
 			<trans-unit id="item.done.toggleTask" resname="item.done.toggleTask">
 				<source>Task list updated.</source>
 			</trans-unit>
+			<trans-unit id="item.reviewers" resname="item.reviewers">
+				<source>Reviewers</source>
+			</trans-unit>
+			<trans-unit id="item.review.requested" resname="item.review.requested">
+				<source>pending</source>
+			</trans-unit>
+			<trans-unit id="item.milestone" resname="item.milestone">
+				<source>Milestone</source>
+			</trans-unit>
+			<trans-unit id="item.noMilestone" resname="item.noMilestone">
+				<source>No milestone</source>
+			</trans-unit>
+			<trans-unit id="item.dueDate" resname="item.dueDate">
+				<source>Due date</source>
+			</trans-unit>
+			<trans-unit id="item.confidentiality" resname="item.confidentiality">
+				<source>Confidentiality</source>
+			</trans-unit>
+			<trans-unit id="item.confidential.yes" resname="item.confidential.yes">
+				<source>Confidential: only members with enough permissions can see it.</source>
+			</trans-unit>
+			<trans-unit id="item.confidential.no" resname="item.confidential.no">
+				<source>Not confidential.</source>
+			</trans-unit>
+			<trans-unit id="item.discussion" resname="item.discussion">
+				<source>Discussion</source>
+			</trans-unit>
+			<trans-unit id="item.locked.yes" resname="item.locked.yes">
+				<source>Locked: only members can comment.</source>
+			</trans-unit>
+			<trans-unit id="item.locked.no" resname="item.locked.no">
+				<source>Open for comments.</source>
+			</trans-unit>
+			<trans-unit id="item.notifications" resname="item.notifications">
+				<source>Notifications</source>
+			</trans-unit>
+			<trans-unit id="item.subscribed.yes" resname="item.subscribed.yes">
+				<source>You get notifications.</source>
+			</trans-unit>
+			<trans-unit id="item.subscribed.no" resname="item.subscribed.no">
+				<source>You get no notifications.</source>
+			</trans-unit>
+			<trans-unit id="item.participants" resname="item.participants">
+				<source>Participants</source>
+			</trans-unit>
+			<trans-unit id="item.field.user" resname="item.field.user">
+				<source>User name</source>
+			</trans-unit>
+			<trans-unit id="item.field.addAssignee" resname="item.field.addAssignee">
+				<source>Assignee to add</source>
+			</trans-unit>
+			<trans-unit id="item.field.addReviewer" resname="item.field.addReviewer">
+				<source>Reviewer to add</source>
+			</trans-unit>
+			<trans-unit id="item.action.add" resname="item.action.add">
+				<source>Add</source>
+			</trans-unit>
+			<trans-unit id="item.action.set" resname="item.action.set">
+				<source>Set</source>
+			</trans-unit>
+			<trans-unit id="item.action.removeAssignee" resname="item.action.removeAssignee">
+				<source>Remove assignee %s</source>
+			</trans-unit>
+			<trans-unit id="item.action.removeReviewer" resname="item.action.removeReviewer">
+				<source>Remove reviewer %s</source>
+			</trans-unit>
+			<trans-unit id="item.action.makeConfidential" resname="item.action.makeConfidential">
+				<source>Make confidential</source>
+			</trans-unit>
+			<trans-unit id="item.action.makePublic" resname="item.action.makePublic">
+				<source>Make not confidential</source>
+			</trans-unit>
+			<trans-unit id="item.action.lock" resname="item.action.lock">
+				<source>Lock discussion</source>
+			</trans-unit>
+			<trans-unit id="item.action.unlock" resname="item.action.unlock">
+				<source>Unlock discussion</source>
+			</trans-unit>
+			<trans-unit id="item.action.subscribe" resname="item.action.subscribe">
+				<source>Subscribe</source>
+			</trans-unit>
+			<trans-unit id="item.action.unsubscribe" resname="item.action.unsubscribe">
+				<source>Unsubscribe</source>
+			</trans-unit>
+			<trans-unit id="item.done.addAssignee" resname="item.done.addAssignee">
+				<source>Assignee added.</source>
+			</trans-unit>
+			<trans-unit id="item.done.removeAssignee" resname="item.done.removeAssignee">
+				<source>Assignee removed.</source>
+			</trans-unit>
+			<trans-unit id="item.done.addReviewer" resname="item.done.addReviewer">
+				<source>Review requested.</source>
+			</trans-unit>
+			<trans-unit id="item.done.removeReviewer" resname="item.done.removeReviewer">
+				<source>Reviewer removed.</source>
+			</trans-unit>
+			<trans-unit id="item.done.setMilestone" resname="item.done.setMilestone">
+				<source>Milestone updated.</source>
+			</trans-unit>
+			<trans-unit id="item.done.setDueDate" resname="item.done.setDueDate">
+				<source>Due date updated.</source>
+			</trans-unit>
+			<trans-unit id="item.done.setConfidential" resname="item.done.setConfidential">
+				<source>Confidentiality updated.</source>
+			</trans-unit>
+			<trans-unit id="item.done.lock" resname="item.done.lock">
+				<source>Discussion locked.</source>
+			</trans-unit>
+			<trans-unit id="item.done.unlock" resname="item.done.unlock">
+				<source>Discussion unlocked.</source>
+			</trans-unit>
+			<trans-unit id="item.done.subscribe" resname="item.done.subscribe">
+				<source>Notifications turned on.</source>
+			</trans-unit>
+			<trans-unit id="item.done.unsubscribe" resname="item.done.unsubscribe">
+				<source>Notifications turned off.</source>
+			</trans-unit>
+			<trans-unit id="item.error.user" resname="item.error.user">
+				<source>This user cannot be added or removed here.</source>
+			</trans-unit>
+			<trans-unit id="item.error.milestone" resname="item.error.milestone">
+				<source>Choose another open milestone.</source>
+			</trans-unit>
+			<trans-unit id="item.error.dueDate" resname="item.error.dueDate">
+				<source>Enter a different, valid date.</source>
+			</trans-unit>
 			<trans-unit id="item.done.deleteComment" resname="item.done.deleteComment">
 				<source>Comment deleted.</source>
 			</trans-unit>

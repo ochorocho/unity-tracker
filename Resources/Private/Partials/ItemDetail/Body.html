@@ -72,42 +72,7 @@
     </form>
 </f:if>
 
-<dl class="mb-3" style="display: grid; grid-template-columns: max-content 1fr; gap: .5rem 1rem; align-items: center">
-    <dt><f:translate key="item.assignees" extensionName="UnityTracker" /></dt>
-    <dd class="mb-0" data-item-assignees>
-        <f:for each="{detail.assignees}" as="assignee" iteration="iteration">{assignee.name}<f:if condition="!{iteration.isLast}">, </f:if></f:for>
-        <f:if condition="!{detail.assignees}"><f:translate key="item.none" extensionName="UnityTracker" /></f:if>
-    </dd>
-    <dt><f:translate key="item.labels" extensionName="UnityTracker" /></dt>
-    <dd class="mb-0 d-flex flex-wrap align-items-center gap-1" data-item-labels>
-        <f:for each="{detail.labels}" as="label">
-            <span class="badge badge-default d-inline-flex align-items-center gap-1" data-label="{label.name}">
-                <f:if condition="{label.color}"><span aria-hidden="true" style="display: inline-block; width: .65em; height: .65em; border-radius: 50%; background: {label.color}"></span></f:if>
-                {label.name}
-                <f:if condition="{can.removeLabel}">
-                    <form method="post" action="{actionUri}" class="d-inline" data-item-form>
-                        <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
-                        <input type="hidden" name="label" value="{label.name}" />
-                        <button class="btn btn-link p-0 lh-1" style="color: inherit" name="action" value="removeLabel"
-                            aria-label="{f:translate(key: 'item.action.removeLabel', extensionName: 'UnityTracker', arguments: {0: label.name})}">×</button>
-                    </form>
-                </f:if>
-            </span>
-        </f:for>
-        <f:if condition="{can.addLabel}">
-            <f:if condition="{detail.addableLabels}">
-                <form method="post" action="{actionUri}" class="d-flex gap-1" data-item-form>
-                    <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
-                    <select class="form-select form-select-sm w-auto" name="label" aria-label="{f:translate(key: 'item.action.addLabel', extensionName: 'UnityTracker')}">
-                        <f:for each="{detail.addableLabels}" as="label"><option value="{label.name}">{label.name}</option></f:for>
-                    </select>
-                    <button class="btn btn-default btn-sm" name="action" value="addLabel"><f:translate key="item.action.addLabel" extensionName="UnityTracker" /></button>
-                </form>
-            </f:if>
-        </f:if>
-    </dd>
-</dl>
-
+<div data-item-layout>
 <section class="mb-4" data-item-description>
     <h2 class="h4"><f:translate key="item.description" extensionName="UnityTracker" /></h2>
     <div data-inline-view="edit" data-task-scope>
@@ -154,4 +119,8 @@
         </form>
     </f:if>
 </section>
+<aside data-item-sidebar>
+    <f:render partial="ItemDetail/Sidebar" arguments="{_all}" />
+</aside>
+</div>
 </html>

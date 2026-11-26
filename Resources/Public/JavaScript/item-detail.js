@@ -12,6 +12,7 @@ import '@ochorocho/unity-tracker/markdown-editor.js';
  * - inline editing: [data-inline-start=key] swaps [data-inline-view=key] for [data-inline-field=key],
  * - [data-load-older] puts an older page of the timeline in front of [data-timeline],
  * - a task list checkbox [data-task-index] sends the [data-task-form] of its [data-task-scope],
+ * - user fields [data-user-suggest] fill their <datalist> with the provider's users as you type,
  * - after a change the overview is told, it reloads once the sheet is closed.
  */
 const root = document.querySelector('[data-item-detail]');
@@ -22,12 +23,44 @@ function announceChange() {
   }
 }
 
-function l10n(key) {
+function editorConfig() {
   try {
-    return JSON.parse(root?.dataset.editorConfig || '{}').l10n?.[key] ?? key;
+    return JSON.parse(root?.dataset.editorConfig || '{}');
   } catch {
-    return key;
+    return {};
   }
+}
+
+function l10n(key) {
+  return editorConfig().l10n?.[key] ?? key;
+}
+
+let suggestTimer;
+function suggestUsers(input) {
+  clearTimeout(suggestTimer);
+  suggestTimer = setTimeout(async () => {
+    const config = editorConfig();
+    const list = input.list;
+    if (!config.suggestUrl || !list) {
+      return;
+    }
+    const url = new URL(config.suggestUrl, window.location.href);
+    Object.entries(config.reference ?? {}).forEach(([key, value]) => url.searchParams.set(key, String(value)));
+    url.searchParams.set('kind', 'user');
+    url.searchParams.set('q', input.value.trim());
+    try {
+      const response = await fetch(url, { headers: { Accept: 'application/json' } });
+      const items = (await response.json()).items ?? [];
+      list.replaceChildren(...items.map((item) => {
+        const option = document.createElement('option');
+        option.value = item.value;
+        option.label = item.label;
+        return option;
+      }));
+    } catch {
+      // Suggestions are a convenience.
+    }
+  }, 250);
 }
 
 function setEditing(name, editing) {
@@ -122,6 +155,12 @@ if (root) {
       setEditing(start.dataset.inlineStart, true);
     } else if (cancel) {
       setEditing(cancel.dataset.inlineCancel, false);
+    }
+  });
+
+  root.addEventListener('input', (event) => {
+    if (event.target.matches('input[data-user-suggest]')) {
+      suggestUsers(event.target);
     }
   });
 

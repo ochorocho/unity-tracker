@@ -271,6 +271,66 @@
               "totalCount": 5
             }
           }
+        ],
+        "milestone": null,
+        "participants": {
+          "nodes": [
+            {
+              "login": "octo"
+            },
+            {
+              "login": "me"
+            }
+          ]
+        },
+        "locked": false,
+        "viewerSubscription": "SUBSCRIBED",
+        "viewerCanSubscribe": true,
+        "reviewRequests": {
+          "nodes": [
+            {
+              "requestedReviewer": {
+                "login": "joe"
+              }
+            },
+            {
+              "requestedReviewer": {}
+            }
+          ]
+        },
+        "latestReviews": {
+          "nodes": [
+            {
+              "state": "APPROVED",
+              "author": {
+                "login": "ann"
+              }
+            },
+            {
+              "state": "CHANGES_REQUESTED",
+              "author": {
+                "login": "joe"
+              }
+            },
+            {
+              "state": "PENDING",
+              "author": {
+                "login": "me"
+              }
+            }
+          ]
+        }
+      },
+      "milestones": {
+        "nodes": [
+          {
+            "number": 3,
+            "title": "Sprint 3"
+          },
+          {
+            "number": 4,
+            "title": "Sprint 4"
+          }
         ]
       }
     }

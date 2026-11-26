@@ -1,0 +1,186 @@
+<html
+    xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+    data-namespace-typo3-fluid="true"
+>
+<f:comment>
+    Metadata of the item, each part with the actions the user may do (see ItemAction). User fields get
+    suggestions from item-detail.js ([data-user-suggest]).
+</f:comment>
+<section class="mb-3" data-sidebar="assignees">
+    <h2 class="h6 mb-1"><f:translate key="item.assignees" extensionName="UnityTracker" /></h2>
+    <ul class="list-unstyled mb-1" data-item-assignees>
+        <f:for each="{detail.assignees}" as="assignee">
+            <li class="d-flex align-items-center gap-1" data-user="{assignee.name}">
+                {assignee.name}
+                <f:if condition="{can.removeAssignee}">
+                    <f:render section="RemoveUser" arguments="{detail: detail, actionUri: actionUri, user: assignee.name, action: 'removeAssignee'}" />
+                </f:if>
+            </li>
+        </f:for>
+    </ul>
+    <f:if condition="!{detail.assignees}"><p class="mb-1"><f:translate key="item.none" extensionName="UnityTracker" /></p></f:if>
+    <f:if condition="{can.addAssignee}"><f:render section="AddUser" arguments="{detail: detail, actionUri: actionUri, action: 'addAssignee'}" /></f:if>
+</section>
+
+<f:if condition="{detail.sourceBranch}">
+    <section class="mb-3" data-sidebar="reviewers">
+        <h2 class="h6 mb-1"><f:translate key="item.reviewers" extensionName="UnityTracker" /></h2>
+        <ul class="list-unstyled mb-1">
+            <f:for each="{detail.reviewers}" as="reviewer">
+                <li class="d-flex flex-wrap align-items-center gap-1" data-user="{reviewer.name}">
+                    {reviewer.name}
+                    <f:if condition="{reviewer.state}">
+                        <f:then><span class="badge badge-default"><f:translate key="item.review.{reviewer.state}" extensionName="UnityTracker" default="{reviewer.state}" /></span></f:then>
+                        <f:else><span class="badge badge-warning"><f:translate key="item.review.requested" extensionName="UnityTracker" /></span></f:else>
+                    </f:if>
+                    <f:if condition="{can.removeReviewer} && {reviewer.removable}">
+                        <f:render section="RemoveUser" arguments="{detail: detail, actionUri: actionUri, user: reviewer.name, action: 'removeReviewer'}" />
+                    </f:if>
+                </li>
+            </f:for>
+        </ul>
+        <f:if condition="!{detail.reviewers}"><p class="mb-1"><f:translate key="item.none" extensionName="UnityTracker" /></p></f:if>
+        <f:if condition="{can.addReviewer}"><f:render section="AddUser" arguments="{detail: detail, actionUri: actionUri, action: 'addReviewer'}" /></f:if>
+    </section>
+</f:if>
+
+<section class="mb-3" data-sidebar="labels">
+    <h2 class="h6 mb-1"><f:translate key="item.labels" extensionName="UnityTracker" /></h2>
+    <div class="d-flex flex-wrap align-items-center gap-1" data-item-labels>
+        <f:for each="{detail.labels}" as="label">
+            <span class="badge badge-default d-inline-flex align-items-center gap-1" data-label="{label.name}">
+                <f:if condition="{label.color}"><span aria-hidden="true" style="display: inline-block; width: .65em; height: .65em; border-radius: 50%; background: {label.color}"></span></f:if>
+                {label.name}
+                <f:if condition="{can.removeLabel}">
+                    <form method="post" action="{actionUri}" class="d-inline" data-item-form>
+                        <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+                        <input type="hidden" name="label" value="{label.name}" />
+                        <button class="btn btn-link p-0 lh-1" style="color: inherit" name="action" value="removeLabel"
+                            aria-label="{f:translate(key: 'item.action.removeLabel', extensionName: 'UnityTracker', arguments: {0: label.name})}">×</button>
+                    </form>
+                </f:if>
+            </span>
+        </f:for>
+        <f:if condition="!{detail.labels}"><span><f:translate key="item.none" extensionName="UnityTracker" /></span></f:if>
+    </div>
+    <f:if condition="{can.addLabel} && {detail.addableLabels}">
+        <form method="post" action="{actionUri}" class="d-flex gap-1 mt-1" data-item-form>
+            <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+            <select class="form-select form-select-sm" name="label" aria-label="{f:translate(key: 'item.action.addLabel', extensionName: 'UnityTracker')}">
+                <f:for each="{detail.addableLabels}" as="label"><option value="{label.name}">{label.name}</option></f:for>
+            </select>
+            <button class="btn btn-default btn-sm" name="action" value="addLabel"><f:translate key="item.action.addLabel" extensionName="UnityTracker" /></button>
+        </form>
+    </f:if>
+</section>
+
+<section class="mb-3" data-sidebar="milestone">
+    <h2 class="h6 mb-1"><f:translate key="item.milestone" extensionName="UnityTracker" /></h2>
+    <p class="mb-1" data-item-milestone>
+        <f:if condition="{detail.milestone.id}">
+            <f:then>{detail.milestone.title}</f:then>
+            <f:else><f:translate key="item.none" extensionName="UnityTracker" /></f:else>
+        </f:if>
+    </p>
+    <f:if condition="{can.setMilestone}">
+        <form method="post" action="{actionUri}" class="d-flex gap-1" data-item-form>
+            <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+            <select class="form-select form-select-sm" name="milestone" aria-label="{f:translate(key: 'item.milestone', extensionName: 'UnityTracker')}">
+                <option value=""><f:translate key="item.noMilestone" extensionName="UnityTracker" /></option>
+                <f:for each="{detail.availableMilestones}" as="milestone">
+                    <option value="{milestone.id}" {f:if(condition: '{milestone.id} == {detail.milestone.id}', then: 'selected')}>{milestone.title}</option>
+                </f:for>
+            </select>
+            <button class="btn btn-default btn-sm" name="action" value="setMilestone"><f:translate key="item.action.set" extensionName="UnityTracker" /></button>
+        </form>
+    </f:if>
+</section>
+
+<f:if condition="{can.setDueDate} || {detail.dueDate}">
+    <section class="mb-3" data-sidebar="dueDate">
+        <h2 class="h6 mb-1"><f:translate key="item.dueDate" extensionName="UnityTracker" /></h2>
+        <f:if condition="{can.setDueDate}">
+            <f:then>
+                <form method="post" action="{actionUri}" class="d-flex gap-1" data-item-form>
+                    <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+                    <input class="form-control form-control-sm" type="date" name="dueDate" value="{detail.dueDate}"
+                        aria-label="{f:translate(key: 'item.dueDate', extensionName: 'UnityTracker')}" />
+                    <button class="btn btn-default btn-sm" name="action" value="setDueDate"><f:translate key="item.action.set" extensionName="UnityTracker" /></button>
+                </form>
+            </f:then>
+            <f:else><p class="mb-1" data-item-due-date>{detail.dueDate}</p></f:else>
+        </f:if>
+    </section>
+</f:if>
+
+<f:if condition="{can.setConfidential} || {detail.confidential}">
+    <section class="mb-3" data-sidebar="confidential">
+        <h2 class="h6 mb-1"><f:translate key="item.confidentiality" extensionName="UnityTracker" /></h2>
+        <p class="mb-1"><f:translate key="item.confidential.{f:if(condition: detail.confidential, then: 'yes', else: 'no')}" extensionName="UnityTracker" /></p>
+        <f:if condition="{can.setConfidential}">
+            <form method="post" action="{actionUri}" data-item-form>
+                <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+                <input type="hidden" name="confidential" value="{f:if(condition: detail.confidential, else: '1')}" />
+                <button class="btn btn-default btn-sm" name="action" value="setConfidential">
+                    <f:translate key="item.action.{f:if(condition: detail.confidential, then: 'makePublic', else: 'makeConfidential')}" extensionName="UnityTracker" />
+                </button>
+            </form>
+        </f:if>
+    </section>
+</f:if>
+
+<section class="mb-3" data-sidebar="lock">
+    <h2 class="h6 mb-1"><f:translate key="item.discussion" extensionName="UnityTracker" /></h2>
+    <p class="mb-1"><f:translate key="item.locked.{f:if(condition: detail.locked, then: 'yes', else: 'no')}" extensionName="UnityTracker" /></p>
+    <f:if condition="{can.lock} || {can.unlock}">
+        <form method="post" action="{actionUri}" data-item-form>
+            <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+            <f:if condition="{can.lock}">
+                <f:then><button class="btn btn-default btn-sm" name="action" value="lock"><f:translate key="item.action.lock" extensionName="UnityTracker" /></button></f:then>
+                <f:else><button class="btn btn-default btn-sm" name="action" value="unlock"><f:translate key="item.action.unlock" extensionName="UnityTracker" /></button></f:else>
+            </f:if>
+        </form>
+    </f:if>
+</section>
+
+<section class="mb-3" data-sidebar="notifications">
+    <h2 class="h6 mb-1"><f:translate key="item.notifications" extensionName="UnityTracker" /></h2>
+    <p class="mb-1"><f:translate key="item.subscribed.{f:if(condition: detail.subscribed, then: 'yes', else: 'no')}" extensionName="UnityTracker" /></p>
+    <f:if condition="{can.subscribe} || {can.unsubscribe}">
+        <form method="post" action="{actionUri}" data-item-form>
+            <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+            <f:if condition="{can.subscribe}">
+                <f:then><button class="btn btn-default btn-sm" name="action" value="subscribe"><f:translate key="item.action.subscribe" extensionName="UnityTracker" /></button></f:then>
+                <f:else><button class="btn btn-default btn-sm" name="action" value="unsubscribe"><f:translate key="item.action.unsubscribe" extensionName="UnityTracker" /></button></f:else>
+            </f:if>
+        </form>
+    </f:if>
+</section>
+
+<f:if condition="{detail.participants}">
+    <section class="mb-3" data-sidebar="participants">
+        <h2 class="h6 mb-1"><f:translate key="item.participants" extensionName="UnityTracker" /></h2>
+        <p class="mb-1 text-break"><f:for each="{detail.participants}" as="participant" iteration="iteration">{participant}<f:if condition="!{iteration.isLast}">, </f:if></f:for></p>
+    </section>
+</f:if>
+
+<f:section name="RemoveUser">
+    <form method="post" action="{actionUri}" class="d-inline" data-item-form>
+        <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+        <input type="hidden" name="user" value="{user}" />
+        <button class="btn btn-link p-0 lh-1" style="color: inherit" name="action" value="{action}"
+            aria-label="{f:translate(key: 'item.action.{action}', extensionName: 'UnityTracker', arguments: {0: user})}">×</button>
+    </form>
+</f:section>
+
+<f:section name="AddUser">
+    <form method="post" action="{actionUri}" class="d-flex gap-1" data-item-form>
+        <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+        <input class="form-control form-control-sm" type="text" name="user" required autocomplete="off" list="unitytracker-{action}-users"
+            data-user-suggest aria-label="{f:translate(key: 'item.field.{action}', extensionName: 'UnityTracker')}"
+            placeholder="{f:translate(key: 'item.field.user', extensionName: 'UnityTracker')}" />
+        <datalist id="unitytracker-{action}-users"></datalist>
+        <button class="btn btn-default btn-sm" name="action" value="{action}"><f:translate key="item.action.add" extensionName="UnityTracker" /></button>
+    </form>
+</f:section>
+</html>

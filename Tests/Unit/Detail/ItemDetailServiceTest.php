@@ -227,6 +227,45 @@ final class ItemDetailServiceTest extends UnitTestCase
         $this->subject()->perform($this->reference(), Fixture::connection(Provider::GitHub), ItemAction::TOGGLE_TASK, ['subject' => '9001', 'index' => '0', 'checked' => '1']);
     }
 
+    /**
+     * @return array<string, array{string, array<string, string>}>
+     */
+    public static function invalidSidebarChanges(): array
+    {
+        return [
+            'assignee already assigned' => [ItemAction::ADD_ASSIGNEE, ['user' => 'octocat']],
+            'assignee not assigned' => [ItemAction::REMOVE_ASSIGNEE, ['user' => 'octo']],
+            'invalid user name' => [ItemAction::ADD_ASSIGNEE, ['user' => 'a b']],
+            'reviewer already requested' => [ItemAction::ADD_REVIEWER, ['user' => 'joe']],
+            'review cannot be withdrawn' => [ItemAction::REMOVE_REVIEWER, ['user' => 'ann']],
+            'unknown milestone' => [ItemAction::SET_MILESTONE, ['milestone' => '99']],
+            'milestone unchanged' => [ItemAction::SET_MILESTONE, ['milestone' => '']],
+        ];
+    }
+
+    /**
+     * @param array<string, string> $input
+     */
+    #[Test]
+    #[DataProvider('invalidSidebarChanges')]
+    public function invalidSidebarChangeIsNotSent(string $action, array $input): void
+    {
+        $this->expectException(InvalidActionException::class);
+        try {
+            $this->subject()->perform($this->reference(), Fixture::connection(Provider::GitHub), $action, $input);
+        } finally {
+            self::assertCount(1, $this->sent);
+        }
+    }
+
+    #[Test]
+    public function reviewerWhoReviewedCanBeAskedAgain(): void
+    {
+        $this->subject()->perform($this->reference(), Fixture::connection(Provider::GitHub), ItemAction::ADD_REVIEWER, ['user' => 'ann']);
+
+        self::assertSame('POST https://api.github.com/repos/acme/app/pulls/42/requested_reviewers', $this->sent[1]);
+    }
+
     #[Test]
     public function apiMessageIsPartOfTheError(): void
     {

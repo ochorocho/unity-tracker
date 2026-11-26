@@ -23,6 +23,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  *
  * Discussions: jane's comment, tester's comment, a system note and jane's unresolved diff thread.
  * One older page (cursor OLDER) holds a system note. Award emoji: jane's 👍 on the merge request and 🎉 on her comment.
+ * Sidebar: no assignees, reviewer jane, milestone "v1.0" of "v1.0"/"v1.1", unlocked, tester subscribed.
  */
 final class FakeGitLab
 {
@@ -34,6 +35,8 @@ final class FakeGitLab
     private const OLDER = 'b2xkZXI=';
     private const MR = '/api/v4/projects/acme/app/merge_requests/12';
     private const MR_ID = 'gid://gitlab/MergeRequest/1200';
+    private const USERS = ['jane' => 7, 'joe' => 8, 'tester' => 42];
+    private const MILESTONES = [['id' => 'gid://gitlab/Milestone/1', 'title' => 'v1.0'], ['id' => 'gid://gitlab/Milestone/2', 'title' => 'v1.1']];
 
     /**
      * Guzzle middleware.
@@ -85,7 +88,7 @@ final class FakeGitLab
     }
 
     /**
-     * @return array{title: string, description: string, discussions: list<array{id: string, resolvable: bool, resolved: bool, notes: list<array{id: int, author: string, body: string, system?: bool, path?: string}>}>, awards: array<string, list<array{name: string, user: string}>>}
+     * @return array{title: string, description: string, discussions: list<array{id: string, resolvable: bool, resolved: bool, notes: list<array{id: int, author: string, body: string, system?: bool, path?: string}>}>, awards: array<string, list<array{name: string, user: string}>>, assignees: list<string>, reviewers: list<string>, milestone: int, locked: bool, subscribed: bool}
      */
     private function state(): array
     {
@@ -99,6 +102,11 @@ final class FakeGitLab
                 ['id' => 'c3', 'resolvable' => false, 'resolved' => false, 'notes' => [['id' => 103, 'author' => 'jane', 'body' => 'requested review from @tester', 'system' => true]]],
                 ['id' => 'd4', 'resolvable' => true, 'resolved' => false, 'notes' => [['id' => 104, 'author' => 'jane', 'body' => 'Typo in the redirect.', 'path' => 'src/Login.php']]],
             ],
+            'assignees' => [],
+            'reviewers' => ['jane'],
+            'milestone' => 1,
+            'locked' => false,
+            'subscribed' => true,
             // awardable id → awards
             'awards' => [
                 self::MR_ID => [['name' => 'thumbsup', 'user' => 'jane']],
@@ -158,7 +166,22 @@ final class FakeGitLab
             $this->save($state);
             return ['data' => ['awardEmojiToggle' => ['errors' => []]]];
         }
-        if (str_contains((string)($body['query'] ?? ''), 'autocompleteUsers')) {
+        $query = (string)($body['query'] ?? '');
+        if (preg_match('/mergeRequestSet(Assignees|Reviewers|Locked|Subscription)\(/', $query, $set) === 1) {
+            $value = $body['variables']['value'] ?? null;
+            if (in_array($set[1], ['Assignees', 'Reviewers'], true)) {
+                $key = strtolower($set[1]);
+                $users = array_values(array_intersect((array)$value, array_keys(self::USERS)));
+                $state[$key] = str_contains($query, 'operationMode: REMOVE')
+                    ? array_values(array_diff($state[$key], $users))
+                    : array_values(array_unique([...$state[$key], ...$users]));
+            } else {
+                $state[$set[1] === 'Locked' ? 'locked' : 'subscribed'] = (bool)$value;
+            }
+            $this->save($state);
+            return ['data' => ['result' => ['errors' => []]]];
+        }
+        if (str_contains($query, 'autocompleteUsers')) {
             $users = [['username' => 'jane', 'name' => 'Jane Doe'], ['username' => 'joe', 'name' => 'Joe Bloggs']];
             $search = strtolower((string)($body['variables']['search'] ?? ''));
             return ['data' => ['project' => ['autocompleteUsers' => array_values(array_filter(
@@ -196,6 +219,7 @@ final class FakeGitLab
             'currentUser' => ['id' => 'gid://gitlab/User/42', 'username' => 'tester'],
             'project' => [
                 'labels' => ['nodes' => [['title' => 'bug', 'color' => '#d9534f'], ['title' => 'needs review', 'color' => '#428bca']]],
+                'milestones' => ['nodes' => self::MILESTONES],
                 'target' => [
                     'id' => self::MR_ID,
                     'title' => $state['title'],
@@ -209,7 +233,12 @@ final class FakeGitLab
                     'createdAt' => '2026-11-20T08:15:00Z',
                     'author' => ['username' => 'jane'],
                     'labels' => ['nodes' => [['title' => 'bug', 'color' => '#d9534f']]],
-                    'assignees' => ['nodes' => []],
+                    'assignees' => ['nodes' => array_map(static fn(string $name): array => ['id' => 'gid://gitlab/User/' . self::USERS[$name], 'username' => $name], $state['assignees'])],
+                    'reviewers' => ['nodes' => array_map(static fn(string $name): array => ['username' => $name], $state['reviewers'])],
+                    'milestone' => self::MILESTONES[$state['milestone'] - 1] ?? null,
+                    'participants' => ['nodes' => [['username' => 'jane'], ['username' => 'tester']]],
+                    'discussionLocked' => $state['locked'],
+                    'subscribed' => $state['subscribed'],
                     'discussions' => [
                         'pageInfo' => ['hasPreviousPage' => !$older, 'startCursor' => $older ? null : self::OLDER],
                         'nodes' => $discussions,
@@ -298,6 +327,7 @@ final class FakeGitLab
     {
         $state['title'] = (string)($body['title'] ?? $state['title']);
         $state['description'] = (string)($body['description'] ?? $state['description']);
+        $state['milestone'] = (int)($body['milestone_id'] ?? $state['milestone']);
         $this->save($state);
         return ['iid' => 12, 'title' => $state['title']];
     }

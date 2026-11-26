@@ -10,6 +10,15 @@
         [data-item-detail] .task-list, [data-item-detail] .contains-task-list { list-style: none; padding-left: 1.25em; }
         [data-item-detail] .task-list-item input[type="checkbox"] { margin: 0 .4em 0 -1.25em; vertical-align: middle; }
         [data-item-detail] [data-event-html] p { display: inline; margin: 0; }
+        /* Narrow: description, sidebar, activity; wide: the sidebar beside both. */
+        [data-item-layout] { display: grid; gap: 0 2rem; grid-template-columns: minmax(0, 1fr); grid-template-areas: "description" "sidebar" "activity"; }
+        [data-item-layout] > [data-item-description] { grid-area: description; }
+        [data-item-layout] > [data-item-comments] { grid-area: activity; }
+        [data-item-sidebar] { grid-area: sidebar; display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0 1.5rem; align-items: start; }
+        @media (min-width: 992px) {
+            [data-item-layout] { grid-template-columns: minmax(0, 1fr) 16rem; grid-template-rows: auto 1fr; grid-template-areas: "description sidebar" "activity sidebar"; }
+            [data-item-sidebar] { display: block; }
+        }
     </style>
     <div data-item-detail data-editor-config="{editorConfig}" {f:if(condition: changed, then: 'data-item-changed')}>
         <f:if condition="{error}">

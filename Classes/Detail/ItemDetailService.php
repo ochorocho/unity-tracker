@@ -208,6 +208,46 @@ final readonly class ItemDetailService
                     throw new InvalidActionException('notAllowed', 1764240410);
                 }
                 return ['subject' => $target['subject'], 'emoji' => $emoji, 'remove' => ($current[$emoji]['reacted'] ?? false) ? '1' : ''];
+            case ItemAction::ADD_ASSIGNEE:
+            case ItemAction::REMOVE_ASSIGNEE:
+                $user = $text('user');
+                $assigned = in_array($user, $detail->assigneeNames(), true);
+                if (!self::isUserName($user) || $assigned !== ($action === ItemAction::REMOVE_ASSIGNEE)) {
+                    throw new InvalidActionException('user', 1764240413);
+                }
+                return ['user' => $user];
+            case ItemAction::ADD_REVIEWER:
+            case ItemAction::REMOVE_REVIEWER:
+                $user = $text('user');
+                $reviewer = $detail->reviewer($user);
+                $valid = $action === ItemAction::ADD_REVIEWER
+                    // A reviewer who has reviewed already can be asked again.
+                    ? self::isUserName($user) && ($reviewer === null || $reviewer['state'] !== '')
+                    : $reviewer !== null && $reviewer['removable'];
+                if (!$valid) {
+                    throw new InvalidActionException('user', 1764240414);
+                }
+                return ['user' => $user];
+            case ItemAction::SET_MILESTONE:
+                $milestone = $text('milestone');
+                $known = in_array($milestone, array_column($detail->availableMilestones, 'id'), true);
+                if ($milestone === $detail->milestone['id'] || ($milestone !== '' && !$known)) {
+                    throw new InvalidActionException('milestone', 1764240415);
+                }
+                return ['milestone' => $milestone];
+            case ItemAction::SET_DUE_DATE:
+                $date = $text('dueDate');
+                $parsed = \DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+                if ($date === $detail->dueDate || ($date !== '' && ($parsed === false || $parsed->format('Y-m-d') !== $date))) {
+                    throw new InvalidActionException('dueDate', 1764240416);
+                }
+                return ['dueDate' => $date];
+            case ItemAction::SET_CONFIDENTIAL:
+                $confidential = $text('confidential') === '1';
+                if ($confidential === $detail->confidential) {
+                    throw new InvalidActionException('notAllowed', 1764240417);
+                }
+                return ['confidential' => $confidential ? '1' : ''];
             case ItemAction::APPROVE:
                 return ['body' => mb_substr($text('body'), 0, ItemAction::MAX_COMMENT)];
             case ItemAction::EDIT:
@@ -253,6 +293,14 @@ final readonly class ItemDetailService
         return $comment === null
             ? [ItemAction::EDIT, ['title' => $detail->title, 'description' => $markdown]]
             : [ItemAction::EDIT_COMMENT, ['comment' => $comment['id'], 'body' => $markdown]];
+    }
+
+    /**
+     * GitLab and GitHub user names ("jane.doe", "octo-cat", "renovate[bot]").
+     */
+    private static function isUserName(string $name): bool
+    {
+        return preg_match('/^[A-Za-z0-9][A-Za-z0-9_.-]{0,254}(\[bot\])?$/', $name) === 1;
     }
 
     /**

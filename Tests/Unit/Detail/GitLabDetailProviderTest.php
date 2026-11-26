@@ -57,7 +57,8 @@ final class GitLabDetailProviderTest extends UnitTestCase
         self::assertSame([['name' => 'feature', 'color' => '#428bca'], ['name' => 'evil', 'color' => '']], $detail->addableLabels());
         self::assertSame([
             ItemAction::COMMENT, ItemAction::EDIT, ItemAction::CLOSE, ItemAction::ASSIGN_ME, ItemAction::ADD_LABEL,
-            ItemAction::REMOVE_LABEL, ItemAction::APPROVE, ItemAction::MERGE, ItemAction::MARK_DONE, ItemAction::EDIT_COMMENT,
+            ItemAction::REMOVE_LABEL, ItemAction::ADD_ASSIGNEE, ItemAction::REMOVE_ASSIGNEE, ItemAction::SET_MILESTONE, ItemAction::LOCK,
+            ItemAction::ADD_REVIEWER, ItemAction::REMOVE_REVIEWER, ItemAction::UNSUBSCRIBE, ItemAction::APPROVE, ItemAction::MERGE, ItemAction::MARK_DONE, ItemAction::EDIT_COMMENT,
             ItemAction::DELETE_COMMENT, ItemAction::REPLY, ItemAction::RESOLVE, ItemAction::UNRESOLVE, ItemAction::REACT, ItemAction::TOGGLE_TASK,
         ], $detail->actions);
     }
@@ -117,7 +118,54 @@ final class GitLabDetailProviderTest extends UnitTestCase
     {
         $detail = $this->parse('issue', 'GitLab/graphql_issue_closed.json', todo: '');
 
-        self::assertSame([ItemAction::COMMENT, ItemAction::REOPEN, ItemAction::REACT], $detail->actions);
+        self::assertSame([ItemAction::COMMENT, ItemAction::REOPEN, ItemAction::SUBSCRIBE, ItemAction::REACT], $detail->actions);
+        self::assertSame(['2026-12-24', true, true], [$detail->dueDate, $detail->confidential, $detail->locked]);
+        self::assertSame(['id' => '', 'title' => ''], $detail->milestone);
+    }
+
+    #[Test]
+    public function sidebarIsParsed(): void
+    {
+        $detail = $this->parse('merge_request', 'GitLab/graphql_merge_request.json');
+
+        self::assertSame([['name' => 'ann', 'state' => '', 'removable' => true]], $detail->reviewers);
+        self::assertSame(['id' => '31', 'title' => 'v2.0'], $detail->milestone);
+        self::assertSame([['id' => '31', 'title' => 'v2.0'], ['id' => '32', 'title' => 'v2.1']], $detail->availableMilestones);
+        self::assertSame(['jane', 'joe', 'me'], $detail->participants);
+        self::assertTrue($detail->subscribed);
+        self::assertFalse($detail->locked);
+    }
+
+    #[Test]
+    public function sidebarChangesAreMutationsOfTheItem(): void
+    {
+        $detail = $this->parse('merge_request', 'GitLab/graphql_merge_request.json');
+        $connection = Fixture::connection(Provider::GitLab);
+        $mutation = fn(string $action, array $parameters = []): array => json_decode(
+            (string)$this->subject->actionRequest($detail, $action, $parameters, $connection)->getBody(),
+            true
+        );
+
+        $assignee = $mutation(ItemAction::ADD_ASSIGNEE, ['user' => 'jane']);
+        self::assertStringContainsString('mergeRequestSetAssignees(input: {projectPath: $path, iid: $iid, assigneeUsernames: $value, operationMode: APPEND})', $assignee['query']);
+        self::assertSame(['path' => 'acme/app', 'iid' => '12', 'value' => ['jane']], $assignee['variables']);
+        self::assertStringContainsString('reviewerUsernames: $value, operationMode: REMOVE', $mutation(ItemAction::REMOVE_REVIEWER, ['user' => 'ann'])['query']);
+        $lock = $mutation(ItemAction::LOCK);
+        self::assertStringContainsString('mergeRequestSetLocked(', $lock['query']);
+        self::assertTrue($lock['variables']['value']);
+        self::assertFalse($mutation(ItemAction::UNSUBSCRIBE)['variables']['value']);
+
+        $milestone = $this->subject->actionRequest($detail, ItemAction::SET_MILESTONE, ['milestone' => ''], $connection);
+        self::assertSame('PUT https://gitlab.com/api/v4/projects/acme%2Fapp/merge_requests/12', $milestone->getMethod() . ' ' . $milestone->getUri());
+        self::assertSame('{"milestone_id":0}', (string)$milestone->getBody());
+
+        $issue = $this->parse('issue', 'GitLab/graphql_issue_closed.json', todo: '');
+        $dueDate = json_decode((string)$this->subject->actionRequest($issue, ItemAction::SET_DUE_DATE, ['dueDate' => ''], $connection)->getBody(), true);
+        self::assertStringContainsString('issueSetDueDate(input: {projectPath: $path, iid: $iid, dueDate: $value})', $dueDate['query']);
+        self::assertNull($dueDate['variables']['value']);
+        $confidential = json_decode((string)$this->subject->actionRequest($issue, ItemAction::SET_CONFIDENTIAL, ['confidential' => ''], $connection)->getBody(), true);
+        self::assertStringContainsString('issueSetConfidential(', $confidential['query']);
+        self::assertFalse($confidential['variables']['value']);
     }
 
     #[Test]

@@ -33,6 +33,12 @@ final readonly class ItemDetail
      * @param string $olderCursor cursor of the page before, "" if there is none
      * @param list<Reaction> $reactions of the item itself
      * @param string $subject the item's id to react with (see Timeline), "" if reactions are not supported
+     * @param list<array{name: string, state: string, removable: bool}> $reviewers state "" (requested), "approved",
+     *        "changes_requested", "commented", "dismissed"; removable: whether the request can be withdrawn
+     * @param array{id: string, title: string} $milestone id "" = none
+     * @param list<array{id: string, title: string}> $availableMilestones open milestones to choose from
+     * @param string $dueDate "Y-m-d" or ""
+     * @param list<string> $participants user names
      */
     public function __construct(
         public ItemReference $reference,
@@ -60,6 +66,14 @@ final readonly class ItemDetail
         public array $reactions = [],
         public string $subject = '',
         public bool $canReact = false,
+        public array $reviewers = [],
+        public array $milestone = ['id' => '', 'title' => ''],
+        public array $availableMilestones = [],
+        public string $dueDate = '',
+        public bool $confidential = false,
+        public bool $locked = false,
+        public array $participants = [],
+        public bool $subscribed = false,
     ) {}
 
     /**
@@ -78,6 +92,27 @@ final readonly class ItemDetail
     public function isAssignedToViewer(): bool
     {
         return in_array($this->viewer['id'], array_column($this->assignees, 'id'), true);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function assigneeNames(): array
+    {
+        return array_column($this->assignees, 'name');
+    }
+
+    /**
+     * @return array{name: string, state: string, removable: bool}|null
+     */
+    public function reviewer(string $name): ?array
+    {
+        foreach ($this->reviewers as $reviewer) {
+            if ($reviewer['name'] === $name) {
+                return $reviewer;
+            }
+        }
+        return null;
     }
 
     /**

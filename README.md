@@ -43,6 +43,10 @@ The sheet offers only what the API says the token's user may do, and checks it a
 | Resolve / unresolve a thread | resolvable discussions | review threads |
 | React (👍 👎 😄 🎉 😕 ❤️ 🚀 👀) to the item and comments | award emoji (others already set can be toggled) | reactions |
 | Tick task list items in the description and own comments | ✓ (not `[~]`) | ✓ |
+| Add / remove any assignee (with suggestions) | ✓ | ✓ |
+| Request / remove reviewers | merge requests | pull requests (pending requests) |
+| Set milestone, lock discussion, subscribe | ✓ | ✓ |
+| Due date, confidential | issues | – |
 
 The activity reads like on the provider: comments, threads (GitLab discussions incl. diff threads, GitHub
 review threads, with file and line) and events (GitLab system notes; GitHub labels, assignees, commits,
@@ -52,7 +56,9 @@ Details come from one GraphQL query per item (rendered HTML and the user's permi
 use the REST API. Actions run in the background: the sheet updates in place, the overview reloads
 when the sheet is closed. Title, description and your own comments are edited inline. GitHub threads
 are resolved through GraphQL mutations (no REST endpoint), GitLab threads through `discussionToggleResolve`.
-Reactions are GraphQL mutations as well (`awardEmojiToggle`, `addReaction`/`removeReaction`).
+Reactions are GraphQL mutations as well (`awardEmojiToggle`, `addReaction`/`removeReaction`). The sidebar
+(assignees, reviewers, labels, milestone, due date, confidentiality, lock, notifications, participants) sits
+beside the description and activity on wide sheets.
 
 Images in descriptions and comments are loaded by TYPO3 and served from the backend (route
 `itemImage`): the backend's Content-Security-Policy blocks other origins, and uploads of non-public

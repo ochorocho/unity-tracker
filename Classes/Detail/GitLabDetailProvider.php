@@ -27,6 +27,9 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
         author { username }
         labels(first: 50) { nodes { title color } }
         assignees(first: 20) { nodes { id username } }
+        milestone { id title }
+        participants(first: 30) { nodes { username } }
+        subscribed discussionLocked
         discussions(last: 30, before: $before) {
           pageInfo { hasPreviousPage startCursor }
           nodes {
@@ -46,8 +49,10 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
           currentUser { id username }
           project(fullPath: $fullPath) {
             labels(first: 100, includeAncestorGroups: true) { nodes { title color } }
+            milestones(state: active, includeAncestors: true, first: 50) { nodes { id title } }
             target: issue(iid: $iid) {
               %s
+              dueDate confidential
               userPermissions { readIssue updateIssue createNote reopenIssue adminIssue }
             }
           }
@@ -59,10 +64,12 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
           currentUser { id username }
           project(fullPath: $fullPath) {
             labels(first: 100, includeAncestorGroups: true) { nodes { title color } }
+            milestones(state: active, includeAncestors: true, first: 50) { nodes { id title } }
             target: mergeRequest(iid: $iid) {
               %s
               draft sourceBranch targetBranch detailedMergeStatus mergeable
               approvedBy(first: 50) { nodes { username } }
+              reviewers(first: 20) { nodes { username } }
               awardEmoji { nodes { name emoji user { username } } }
               userPermissions { readMergeRequest updateMergeRequest createNote canMerge canApprove adminMergeRequest }
             }
@@ -79,6 +86,13 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
     private const AWARD_MUTATION = <<<'GRAPHQL'
         mutation($id: AwardableID!, $name: String!) {
           awardEmojiToggle(input: {awardableId: $id, name: $name}) { errors }
+        }
+        GRAPHQL;
+
+    /** %1$s issue or mergeRequest, %2$s what is set ("SetLocked"), %3$s the type of $value, %4$s the input fields */
+    private const SET_MUTATION = <<<'GRAPHQL'
+        mutation($path: ID!, $iid: String!, $value: %3$s) {
+          result: %1$s%2$s(input: {projectPath: $path, iid: $iid, %4$s}) { errors }
         }
         GRAPHQL;
 
@@ -163,6 +177,24 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
             reactions: $this->reactions($awards, $viewer['name']),
             subject: $this->awardable(Payload::string($target, 'id')),
             canReact: Payload::bool($permissions, $reference->isChange() ? 'readMergeRequest' : 'readIssue'),
+            reviewers: array_map(static fn(array $user): array => [
+                'name' => Payload::string($user, 'username'),
+                'state' => '',
+                'removable' => true,
+            ], Payload::list($target, 'reviewers', 'nodes')),
+            milestone: $this->milestone(Payload::array($target, 'milestone')),
+            availableMilestones: array_values(array_filter(
+                array_map($this->milestone(...), Payload::list($payload, 'data', 'project', 'milestones', 'nodes')),
+                static fn(array $milestone): bool => $milestone['id'] !== ''
+            )),
+            dueDate: preg_match('/^\d{4}-\d{2}-\d{2}/', Payload::string($target, 'dueDate'), $date) === 1 ? $date[0] : '',
+            confidential: Payload::bool($target, 'confidential'),
+            locked: Payload::bool($target, 'discussionLocked'),
+            participants: array_values(array_filter(array_map(
+                static fn(array $user): string => Payload::string($user, 'username'),
+                Payload::list($target, 'participants', 'nodes')
+            ))),
+            subscribed: Payload::bool($target, 'subscribed'),
         );
         $detail = $this->withActions($detail, $permissions, Payload::bool($target, 'mergeable'));
 
@@ -202,6 +234,14 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
             ]),
             // Toggles: perform() has checked the current state already.
             ItemAction::REACT => $this->graphql($connection, self::AWARD_MUTATION, ['id' => $parameters['subject'], 'name' => $parameters['emoji']]),
+            ItemAction::ADD_ASSIGNEE, ItemAction::REMOVE_ASSIGNEE => $this->set($connection, $reference, 'SetAssignees', '[String!]!', 'assigneeUsernames: $value, operationMode: ' . ($action === ItemAction::ADD_ASSIGNEE ? 'APPEND' : 'REMOVE'), [$parameters['user']]),
+            ItemAction::ADD_REVIEWER, ItemAction::REMOVE_REVIEWER => $this->set($connection, $reference, 'SetReviewers', '[String!]!', 'reviewerUsernames: $value, operationMode: ' . ($action === ItemAction::ADD_REVIEWER ? 'APPEND' : 'REMOVE'), [$parameters['user']]),
+            // No GraphQL mutation for issue milestones: REST for both, 0 removes it.
+            ItemAction::SET_MILESTONE => $this->rest($connection, 'PUT', $path, ['milestone_id' => (int)$parameters['milestone']]),
+            ItemAction::SET_DUE_DATE => $this->set($connection, $reference, 'SetDueDate', 'Time', 'dueDate: $value', $parameters['dueDate'] !== '' ? $parameters['dueDate'] : null),
+            ItemAction::SET_CONFIDENTIAL => $this->set($connection, $reference, 'SetConfidential', 'Boolean!', 'confidential: $value', $parameters['confidential'] === '1'),
+            ItemAction::LOCK, ItemAction::UNLOCK => $this->set($connection, $reference, 'SetLocked', 'Boolean!', 'locked: $value', $action === ItemAction::LOCK),
+            ItemAction::SUBSCRIBE, ItemAction::UNSUBSCRIBE => $this->set($connection, $reference, 'SetSubscription', 'Boolean!', 'subscribedState: $value', $action === ItemAction::SUBSCRIBE),
             default => throw new \InvalidArgumentException('Unsupported action ' . $action, 1764240102),
         };
     }
@@ -268,7 +308,14 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
         $allow($detail->state === ItemDetail::STATE_CLOSED && ($isChange ? $update : Payload::bool($permissions, 'reopenIssue')), ItemAction::REOPEN);
         $allow($admin && !$detail->isAssignedToViewer(), ItemAction::ASSIGN_ME);
         $allow($admin && $detail->isAssignedToViewer(), ItemAction::UNASSIGN_ME);
-        $allow($admin, ItemAction::ADD_LABEL, ItemAction::REMOVE_LABEL);
+        $allow($admin, ItemAction::ADD_LABEL, ItemAction::REMOVE_LABEL, ItemAction::ADD_ASSIGNEE, ItemAction::REMOVE_ASSIGNEE, ItemAction::SET_MILESTONE);
+        $allow($admin && !$detail->locked, ItemAction::LOCK);
+        $allow($admin && $detail->locked, ItemAction::UNLOCK);
+        $allow($admin && !$isChange, ItemAction::SET_DUE_DATE, ItemAction::SET_CONFIDENTIAL);
+        $allow($admin && $isChange && $open, ItemAction::ADD_REVIEWER, ItemAction::REMOVE_REVIEWER);
+        $read = Payload::bool($permissions, $isChange ? 'readMergeRequest' : 'readIssue');
+        $allow($read && !$detail->subscribed, ItemAction::SUBSCRIBE);
+        $allow($read && $detail->subscribed, ItemAction::UNSUBSCRIBE);
         if ($isChange && $open) {
             $allow(!$detail->approvedByViewer && Payload::bool($permissions, 'canApprove'), ItemAction::APPROVE);
             $allow($detail->approvedByViewer, ItemAction::UNAPPROVE);
@@ -349,6 +396,25 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
             ]);
         }
         return $timeline;
+    }
+
+    /**
+     * @param array<mixed> $node
+     * @return array{id: string, title: string} id: the numeric id REST takes, "" for none
+     */
+    private function milestone(array $node): array
+    {
+        $id = (string)substr((string)strrchr(Payload::string($node, 'id'), '/'), 1);
+        return ctype_digit($id) ? ['id' => $id, 'title' => Payload::string($node, 'title')] : ['id' => '', 'title' => ''];
+    }
+
+    /**
+     * One of the *Set* mutations (issueSetLocked, mergeRequestSetReviewers, …) of the item.
+     */
+    private function set(Connection $connection, ItemReference $reference, string $what, string $type, string $input, mixed $value): RequestInterface
+    {
+        $query = sprintf(self::SET_MUTATION, $reference->isChange() ? 'mergeRequest' : 'issue', $what, $type, $input);
+        return $this->graphql($connection, $query, ['path' => $reference->project, 'iid' => (string)$reference->number, 'value' => $value]);
     }
 
     /**

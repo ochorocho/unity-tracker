@@ -59,7 +59,9 @@ final class GitHubDetailProviderTest extends UnitTestCase
         self::assertTrue($detail->isAssignedToViewer());
         self::assertSame([
             ItemAction::COMMENT, ItemAction::EDIT, ItemAction::CLOSE, ItemAction::UNASSIGN_ME, ItemAction::ADD_LABEL,
-            ItemAction::REMOVE_LABEL, ItemAction::APPROVE, ItemAction::REQUEST_CHANGES, ItemAction::MERGE, ItemAction::MARK_DONE,
+            ItemAction::REMOVE_LABEL, ItemAction::ADD_ASSIGNEE, ItemAction::REMOVE_ASSIGNEE, ItemAction::SET_MILESTONE, ItemAction::LOCK,
+            ItemAction::ADD_REVIEWER, ItemAction::REMOVE_REVIEWER, ItemAction::UNSUBSCRIBE,
+            ItemAction::APPROVE, ItemAction::REQUEST_CHANGES, ItemAction::MERGE, ItemAction::MARK_DONE,
             ItemAction::EDIT_COMMENT, ItemAction::DELETE_COMMENT, ItemAction::REPLY, ItemAction::RESOLVE, ItemAction::UNRESOLVE,
             ItemAction::REACT, ItemAction::TOGGLE_TASK,
         ], $detail->actions);
@@ -89,6 +91,39 @@ final class GitHubDetailProviderTest extends UnitTestCase
         self::assertTrue($thread['resolvable'] && $thread['canResolve'] && $thread['canReply']);
         self::assertSame([false, true], array_column($thread['comments'], 'canDelete'));
         self::assertFalse($timeline[1]['canReply'], 'issue comments have no replies on GitHub');
+    }
+
+    #[Test]
+    public function sidebarIsParsed(): void
+    {
+        $detail = $this->parse();
+
+        self::assertSame([
+            ['name' => 'joe', 'state' => '', 'removable' => true],
+            ['name' => 'ann', 'state' => 'approved', 'removable' => false],
+        ], $detail->reviewers, 'requests first; pending reviews are left out');
+        self::assertSame(['id' => '', 'title' => ''], $detail->milestone);
+        self::assertSame([['id' => '3', 'title' => 'Sprint 3'], ['id' => '4', 'title' => 'Sprint 4']], $detail->availableMilestones);
+        self::assertSame(['octo', 'me'], $detail->participants);
+        self::assertTrue($detail->subscribed);
+    }
+
+    #[Test]
+    public function sidebarChangesUseRestAndGraphql(): void
+    {
+        $detail = $this->parse();
+        $connection = Fixture::connection(Provider::GitHub);
+        $request = fn(string $action, array $parameters = []) => $this->subject->actionRequest($detail, $action, $parameters, $connection);
+        $line = static fn($request): string => $request->getMethod() . ' ' . $request->getUri() . ' ' . $request->getBody();
+
+        self::assertSame('POST https://api.github.com/repos/acme/app/issues/42/assignees {"assignees":["octo"]}', $line($request(ItemAction::ADD_ASSIGNEE, ['user' => 'octo'])));
+        self::assertSame('DELETE https://api.github.com/repos/acme/app/pulls/42/requested_reviewers {"reviewers":["joe"]}', $line($request(ItemAction::REMOVE_REVIEWER, ['user' => 'joe'])));
+        self::assertSame('PATCH https://api.github.com/repos/acme/app/issues/42 {"milestone":3}', $line($request(ItemAction::SET_MILESTONE, ['milestone' => '3'])));
+        self::assertSame('PATCH https://api.github.com/repos/acme/app/issues/42 {"milestone":null}', $line($request(ItemAction::SET_MILESTONE, ['milestone' => ''])));
+        self::assertSame('PUT https://api.github.com/repos/acme/app/issues/42/lock ', $line($request(ItemAction::LOCK)));
+        $unsubscribe = json_decode((string)$request(ItemAction::UNSUBSCRIBE)->getBody(), true);
+        self::assertStringContainsString('updateSubscription(', $unsubscribe['query']);
+        self::assertSame(['id' => 'PR_kwDO42', 'state' => 'UNSUBSCRIBED'], $unsubscribe['variables']);
     }
 
     #[Test]

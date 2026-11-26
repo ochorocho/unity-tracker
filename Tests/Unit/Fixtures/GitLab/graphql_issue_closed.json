@@ -43,7 +43,15 @@
           "createNote": true,
           "reopenIssue": true,
           "adminIssue": false
-        }
+        },
+        "milestone": null,
+        "participants": {
+          "nodes": []
+        },
+        "subscribed": false,
+        "discussionLocked": true,
+        "dueDate": "2026-12-24T00:00:00Z",
+        "confidential": true
       }
     }
   }
