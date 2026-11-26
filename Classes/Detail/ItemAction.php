@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of TYPO3 CMS-based extension "unity_tracker" by ochorocho.
+ */
+
+namespace Ochorocho\UnityTracker\Detail;
+
+/**
+ * Actions of the detail sheet. Which of them a user gets is decided by the provider from the API's
+ * permissions (ItemDetail::$actions) and checked again before an action is sent.
+ */
+final class ItemAction
+{
+    public const COMMENT = 'comment';
+    public const EDIT = 'edit';
+    public const CLOSE = 'close';
+    public const REOPEN = 'reopen';
+    public const ASSIGN_ME = 'assignMe';
+    public const UNASSIGN_ME = 'unassignMe';
+    public const ADD_LABEL = 'addLabel';
+    public const REMOVE_LABEL = 'removeLabel';
+    public const APPROVE = 'approve';
+    public const UNAPPROVE = 'unapprove';
+    public const REQUEST_CHANGES = 'requestChanges';
+    public const MERGE = 'merge';
+    public const MARK_DONE = 'markDone';
+    /** Only the user's own comments, see ItemDetail::$comments[]['canEdit'] */
+    public const EDIT_COMMENT = 'editComment';
+    public const DELETE_COMMENT = 'deleteComment';
+    /** Threads: GitLab discussions, GitHub review threads */
+    public const REPLY = 'reply';
+    public const RESOLVE = 'resolve';
+    public const UNRESOLVE = 'unresolve';
+
+    public const ALL = [
+        self::COMMENT, self::EDIT, self::CLOSE, self::REOPEN, self::ASSIGN_ME, self::UNASSIGN_ME, self::ADD_LABEL,
+        self::REMOVE_LABEL, self::APPROVE, self::UNAPPROVE, self::REQUEST_CHANGES, self::MERGE, self::MARK_DONE,
+        self::EDIT_COMMENT, self::DELETE_COMMENT, self::REPLY, self::RESOLVE, self::UNRESOLVE,
+    ];
+
+    public const MAX_COMMENT = 65536;
+    public const MAX_TITLE = 255;
+    public const MAX_DESCRIPTION = 1048576;
+}

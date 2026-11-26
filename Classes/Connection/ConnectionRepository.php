@@ -59,6 +59,16 @@ final readonly class ConnectionRepository
         return $connections;
     }
 
+    public function findOne(int $uid, int $backendUser): ?Connection
+    {
+        foreach ($this->findByBackendUser($backendUser) as $connection) {
+            if ($connection->uid === $uid) {
+                return $connection;
+            }
+        }
+        return null;
+    }
+
     public function add(Connection $connection): int
     {
         $databaseConnection = $this->connectionPool->getConnectionForTable(self::TABLE);

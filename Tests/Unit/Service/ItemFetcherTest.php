@@ -61,7 +61,30 @@ final class ItemFetcherTest extends UnitTestCase
             ['Fix login redirect', 'Add search', 'Crash on start', 'Q4 roadmap', 'v2.0.0', 'Pipeline failed'],
             array_map(static fn($item): string => $item->title, $overview->items)
         );
-        self::assertCount(10, $this->requestedUrls);
+        // 5 GitLab + 5 GitHub lists + 2 GitHub notification details (the release has none)
+        self::assertCount(12, $this->requestedUrls);
+    }
+
+    #[Test]
+    public function notificationsAreEnrichedWithDetails(): void
+    {
+        $this->routes = [
+            'https://api.github.com/notifications' => new Response(200, [], Fixture::json('GitHub/notifications.json')),
+            'https://api.github.com/repos/acme/app/pulls/42' => new Response(200, [], Fixture::json('GitHub/pull_42.json')),
+            'https://api.github.com/repos/acme/app/issues/9' => new Response(404, [], '{}'),
+            'https://api.github.com/search/issues' => new Response(200, [], '{"items": []}'),
+        ];
+
+        $overview = $this->subject()->fetch([Fixture::connection(Provider::GitHub)]);
+
+        self::assertSame([], $overview->errors);
+        $byTitle = [];
+        foreach ($overview->items as $item) {
+            $byTitle[$item->title] = [$item->author, $item->labels];
+        }
+        self::assertSame(['octocat', ['bug', 'needs review']], $byTitle['Fix login redirect']);
+        // A failed detail request keeps the item as it was.
+        self::assertSame(['', []], $byTitle['Crash on start']);
     }
 
     #[Test]

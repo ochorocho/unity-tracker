@@ -1,0 +1,82 @@
+<html
+    xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+    data-namespace-typo3-fluid="true"
+>
+<f:layout name="Module" />
+
+<f:section name="Content">
+    <h1><f:translate key="filters.title" extensionName="UnityTracker" /></h1>
+    <p><f:translate key="filters.intro" extensionName="UnityTracker" /></p>
+
+    <h2><f:translate key="filters.own" extensionName="UnityTracker" /></h2>
+    <f:if condition="{own}">
+        <f:then>
+            <div class="table-fit">
+                <table class="table table-striped table-hover" data-filters="own">
+                    <thead>
+                        <tr>
+                            <th><f:translate key="filters.column.title" extensionName="UnityTracker" /></th>
+                            <th><f:translate key="filters.column.filter" extensionName="UnityTracker" /></th>
+                            <th><f:translate key="filters.column.groups" extensionName="UnityTracker" /></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <f:for each="{own}" as="entry">
+                            <tr>
+                                <td><a href="{entry.applyUri}">{entry.filter.title}</a></td>
+                                <td><f:render partial="FilterTokens" arguments="{tokens: entry.tokens}" /></td>
+                                <td>
+                                    <f:if condition="{entry.groups}">
+                                        <f:then>{entry.groups}</f:then>
+                                        <f:else><span class="text-body-secondary"><f:translate key="filters.private" extensionName="UnityTracker" /></span></f:else>
+                                    </f:if>
+                                </td>
+                                <td class="col-control text-nowrap">
+                                    <a class="btn btn-default btn-sm" href="{entry.editUri}"><f:translate key="filters.editAction" extensionName="UnityTracker" /></a>
+                                    <form method="post" action="{deleteUri}" class="d-inline">
+                                        <input type="hidden" name="uid" value="{entry.filter.uid}" />
+                                        <button type="submit" class="btn btn-default btn-sm"><f:translate key="filters.delete" extensionName="UnityTracker" /></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </f:for>
+                    </tbody>
+                </table>
+            </div>
+        </f:then>
+        <f:else>
+            <p class="text-body-secondary"><f:translate key="filters.none" extensionName="UnityTracker" /></p>
+        </f:else>
+    </f:if>
+
+    <h2><f:translate key="filters.shared" extensionName="UnityTracker" /></h2>
+    <f:if condition="{shared}">
+        <f:then>
+            <div class="table-fit">
+                <table class="table table-striped table-hover" data-filters="shared">
+                    <thead>
+                        <tr>
+                            <th><f:translate key="filters.column.title" extensionName="UnityTracker" /></th>
+                            <th><f:translate key="filters.column.filter" extensionName="UnityTracker" /></th>
+                            <th><f:translate key="filters.column.owner" extensionName="UnityTracker" /></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <f:for each="{shared}" as="entry">
+                            <tr>
+                                <td><a href="{entry.applyUri}">{entry.filter.title}</a></td>
+                                <td><f:render partial="FilterTokens" arguments="{tokens: entry.tokens}" /></td>
+                                <td>{entry.filter.ownerName}</td>
+                            </tr>
+                        </f:for>
+                    </tbody>
+                </table>
+            </div>
+        </f:then>
+        <f:else>
+            <p class="text-body-secondary"><f:translate key="filters.sharedNone" extensionName="UnityTracker" /></p>
+        </f:else>
+    </f:if>
+</f:section>
+</html>

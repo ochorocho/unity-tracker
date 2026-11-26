@@ -10,6 +10,14 @@ services:
       - '../Classes/Connection/Connection.php'
       - '../Classes/Connection/InvalidHostException.php'
       - '../Classes/Connection/Provider.php'
+      - '../Classes/Detail/InvalidActionException.php'
+      - '../Classes/Detail/ItemAction.php'
+      - '../Classes/Detail/ItemDetail.php'
+      - '../Classes/Detail/ItemReference.php'
+      - '../Classes/Detail/Responses.php'
+      - '../Classes/Filter/FilterDefinition.php'
+      - '../Classes/Filter/InvalidFilterException.php'
+      - '../Classes/Filter/SavedFilter.php'
       - '../Classes/Item/*'
       - '../Classes/Provider/Payload.php'
       - '../Classes/Provider/Query.php'
@@ -30,6 +38,14 @@ services:
     factory: ['@TYPO3\CMS\Core\Http\Client\GuzzleClientFactory', 'getClient']
 
   Ochorocho\UnityTracker\Service\ItemFetcher:
+    arguments:
+      $client: '@unitytracker.http_client'
+
+  Ochorocho\UnityTracker\Detail\ItemDetailService:
+    arguments:
+      $client: '@unitytracker.http_client'
+
+  Ochorocho\UnityTracker\Detail\ImageProxy:
     arguments:
       $client: '@unitytracker.http_client'
 

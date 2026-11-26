@@ -64,6 +64,28 @@ final readonly class GitHubProvider implements ProviderInterface
     }
 
     /**
+     * Notifications carry neither labels nor author. The issue/pull request URL is built from the
+     * item's repository and number, never taken from the payload, so it stays on the connection's API.
+     */
+    public function detailRequest(Item $item, Connection $connection): ?RequestInterface
+    {
+        if ($item->category !== Category::Todo
+            || !in_array($item->type, ['issue', 'pull_request'], true)
+            || preg_match('/^#(\d+)$/', $item->reference, $number) !== 1
+            || preg_match('#^[\w.-]+/[\w.-]+$#', $item->project) !== 1
+        ) {
+            return null;
+        }
+        $kind = $item->type === 'pull_request' ? 'pulls' : 'issues';
+        return $this->request($connection, '/repos/' . $item->project . '/' . $kind . '/' . $number[1]);
+    }
+
+    public function enrich(Item $item, array $payload): Item
+    {
+        return $item->withDetails(Payload::string($payload, 'user', 'login'), $this->labels($payload), Payload::bool($payload, 'draft'));
+    }
+
+    /**
      * @param array<mixed> $notification
      */
     private function notification(array $notification, Connection $connection): Item
@@ -72,10 +94,12 @@ final readonly class GitHubProvider implements ProviderInterface
         $repositoryUrl = Payload::url($notification, 'repository', 'html_url');
         $url = $repositoryUrl;
         $reference = '';
+        $number = 0;
         // The subject URL points to the API, e.g. …/repos/acme/app/pulls/7 → https://github.com/acme/app/pull/7
         if (preg_match('#/(issues|pulls)/(\d+)$#', Payload::string($notification, 'subject', 'url'), $matches) === 1) {
             $url = $repositoryUrl . ($matches[1] === 'pulls' ? '/pull/' : '/issues/') . $matches[2];
             $reference = '#' . $matches[2];
+            $number = (int)$matches[2];
         }
 
         return new Item(
@@ -91,6 +115,10 @@ final readonly class GitHubProvider implements ProviderInterface
             Payload::date($notification, 'updated_at'),
             [],
             Payload::string($notification, 'reason'),
+            false,
+            $connection->uid,
+            $number,
+            Payload::string($notification, 'id'),
         );
     }
 
@@ -102,7 +130,6 @@ final readonly class GitHubProvider implements ProviderInterface
         $repositoryUrl = Payload::string($entry, 'repository_url');
         $position = strpos($repositoryUrl, '/repos/');
         $number = Payload::string($entry, 'number');
-        $labels = array_map(static fn(array $label): string => Payload::string($label, 'name'), Payload::list($entry, 'labels'));
 
         return new Item(
             $category,
@@ -115,10 +142,22 @@ final readonly class GitHubProvider implements ProviderInterface
             $number !== '' ? '#' . $number : '',
             Payload::string($entry, 'user', 'login'),
             Payload::date($entry, 'updated_at'),
-            array_values(array_filter($labels, static fn(string $label): bool => $label !== '')),
+            $this->labels($entry),
             '',
             Payload::bool($entry, 'draft'),
+            $connection->uid,
+            (int)$number,
         );
+    }
+
+    /**
+     * @param array<mixed> $entry issue or pull request
+     * @return list<string>
+     */
+    private function labels(array $entry): array
+    {
+        $labels = array_map(static fn(array $label): string => Payload::string($label, 'name'), Payload::list($entry, 'labels'));
+        return array_values(array_filter($labels, static fn(string $label): bool => $label !== ''));
     }
 
     /**

@@ -37,4 +37,12 @@ enum Provider: string
             self::GitHub => $host === 'github.com' ? 'https://api.github.com' : 'https://' . $host . '/api/v3',
         };
     }
+
+    public function graphqlUrl(string $host): string
+    {
+        return match ($this) {
+            self::GitLab => 'https://' . $host . '/api/graphql',
+            self::GitHub => $host === 'github.com' ? 'https://api.github.com/graphql' : 'https://' . $host . '/api/graphql',
+        };
+    }
 }

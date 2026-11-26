@@ -46,32 +46,5 @@
             <p class="text-body-secondary"><f:translate key="connections.none" extensionName="UnityTracker" /></p>
         </f:else>
     </f:if>
-
-    <h2><f:translate key="connections.add" extensionName="UnityTracker" /></h2>
-    <form method="post" action="{addUri}" class="mb-4" style="max-width: 40rem" autocomplete="off">
-        <div class="form-group mb-3">
-            <label class="form-label" for="unitytracker-provider"><f:translate key="connections.form.provider" extensionName="UnityTracker" /></label>
-            <select class="form-select" id="unitytracker-provider" name="provider">
-                <f:for each="{providers}" as="provider">
-                    <option value="{provider.value}" {f:if(condition: '{provider.value} == {form.provider}', then: 'selected')}>{provider.label}</option>
-                </f:for>
-            </select>
-        </div>
-        <div class="form-group mb-3">
-            <label class="form-label" for="unitytracker-host"><f:translate key="connections.form.host" extensionName="UnityTracker" /></label>
-            <input class="form-control" type="text" id="unitytracker-host" name="host" value="{form.host}" placeholder="gitlab.com / github.com" />
-            <div class="form-text"><f:translate key="connections.form.host.description" extensionName="UnityTracker" arguments="{0: allowedHosts}" /></div>
-        </div>
-        <div class="form-group mb-3">
-            <label class="form-label" for="unitytracker-label"><f:translate key="connections.form.label" extensionName="UnityTracker" /></label>
-            <input class="form-control" type="text" id="unitytracker-label" name="label" value="{form.label}" maxlength="255" />
-        </div>
-        <div class="form-group mb-3">
-            <label class="form-label" for="unitytracker-token"><f:translate key="connections.form.token" extensionName="UnityTracker" /></label>
-            <input class="form-control" type="password" id="unitytracker-token" name="accessToken" required autocomplete="new-password" />
-            <div class="form-text"><f:translate key="connections.form.token.description" extensionName="UnityTracker" /></div>
-        </div>
-        <button type="submit" class="btn btn-primary"><f:translate key="connections.form.submit" extensionName="UnityTracker" /></button>
-    </form>
 </f:section>
 </html>

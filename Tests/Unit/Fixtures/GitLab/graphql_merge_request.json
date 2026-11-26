@@ -1,0 +1,203 @@
+{
+  "data": {
+    "currentUser": {
+      "id": "gid://gitlab/User/42",
+      "username": "me"
+    },
+    "project": {
+      "labels": {
+        "nodes": [
+          {
+            "title": "bug",
+            "color": "#d9534f"
+          },
+          {
+            "title": "feature",
+            "color": "#428BCA"
+          },
+          {
+            "title": "evil",
+            "color": "red;background:url(x)"
+          }
+        ]
+      },
+      "target": {
+        "title": "Fix login redirect",
+        "state": "opened",
+        "webUrl": "https://gitlab.com/acme/app/-/merge_requests/12",
+        "description": "Fixes **login**",
+        "descriptionHtml": "<p>Fixes <strong>login</strong></p>",
+        "createdAt": "2026-11-20T08:15:00Z",
+        "author": {
+          "username": "jane"
+        },
+        "labels": {
+          "nodes": [
+            {
+              "title": "bug",
+              "color": "#d9534f"
+            }
+          ]
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "id": "gid://gitlab/User/7",
+              "username": "joe"
+            }
+          ]
+        },
+        "discussions": {
+          "pageInfo": {
+            "hasPreviousPage": true,
+            "startCursor": "eyJpZCI6IjUwMCJ9"
+          },
+          "nodes": [
+            {
+              "id": "gid://gitlab/Discussion/aaa111",
+              "resolvable": false,
+              "resolved": false,
+              "userPermissions": {
+                "resolveNote": false
+              },
+              "notes": {
+                "nodes": [
+                  {
+                    "id": "gid://gitlab/Note/501",
+                    "body": "Looks good",
+                    "bodyHtml": "<p>Looks good</p>",
+                    "createdAt": "2026-11-21T10:00:00Z",
+                    "system": false,
+                    "url": "https://gitlab.com/acme/app/-/merge_requests/12#note_501",
+                    "author": {
+                      "username": "joe"
+                    },
+                    "position": null,
+                    "userPermissions": {
+                      "adminNote": false
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": "gid://gitlab/Discussion/bbb222",
+              "resolvable": false,
+              "resolved": false,
+              "userPermissions": {
+                "resolveNote": false
+              },
+              "notes": {
+                "nodes": [
+                  {
+                    "id": "gid://gitlab/Note/502",
+                    "body": "added 1 commit",
+                    "bodyHtml": "<p>added 1 commit</p>",
+                    "createdAt": "2026-11-21T11:00:00Z",
+                    "system": true,
+                    "url": "https://gitlab.com/acme/app/-/merge_requests/12#note_502",
+                    "author": {
+                      "username": "jane"
+                    },
+                    "position": null,
+                    "userPermissions": {
+                      "adminNote": false
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": "gid://gitlab/Discussion/ccc333",
+              "resolvable": true,
+              "resolved": false,
+              "userPermissions": {
+                "resolveNote": true
+              },
+              "notes": {
+                "nodes": [
+                  {
+                    "id": "gid://gitlab/Note/504",
+                    "body": "Typo here",
+                    "bodyHtml": "<p>Typo here</p>",
+                    "createdAt": "2026-11-21T11:30:00Z",
+                    "system": false,
+                    "url": "https://gitlab.com/acme/app/-/merge_requests/12#note_504",
+                    "author": {
+                      "username": "joe"
+                    },
+                    "position": {
+                      "filePath": "src/Login.php",
+                      "newLine": null,
+                      "oldLine": 12
+                    },
+                    "userPermissions": {
+                      "adminNote": false
+                    }
+                  },
+                  {
+                    "id": "gid://gitlab/Note/505",
+                    "body": "Fixed",
+                    "bodyHtml": "<p>Fixed</p>",
+                    "createdAt": "2026-11-21T11:45:00Z",
+                    "system": false,
+                    "url": "https://gitlab.com/acme/app/-/merge_requests/12#note_505",
+                    "author": {
+                      "username": "me"
+                    },
+                    "position": null,
+                    "userPermissions": {
+                      "adminNote": true
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": "gid://gitlab/Discussion/ddd444",
+              "resolvable": false,
+              "resolved": false,
+              "userPermissions": {
+                "resolveNote": false
+              },
+              "notes": {
+                "nodes": [
+                  {
+                    "id": "gid://gitlab/Note/503",
+                    "body": "Thanks!",
+                    "bodyHtml": "<p>Thanks!</p>",
+                    "createdAt": "2026-11-21T12:00:00Z",
+                    "system": false,
+                    "url": "https://gitlab.com/acme/app/-/merge_requests/12#note_503",
+                    "author": {
+                      "username": "me"
+                    },
+                    "position": null,
+                    "userPermissions": {
+                      "adminNote": true
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "draft": false,
+        "sourceBranch": "fix/login",
+        "targetBranch": "main",
+        "detailedMergeStatus": "mergeable",
+        "mergeable": true,
+        "approvedBy": {
+          "nodes": []
+        },
+        "userPermissions": {
+          "updateMergeRequest": true,
+          "createNote": true,
+          "canMerge": true,
+          "canApprove": true,
+          "adminMergeRequest": true
+        }
+      }
+    }
+  }
+}

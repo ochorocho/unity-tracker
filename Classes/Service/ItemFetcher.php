@@ -66,7 +66,9 @@ final readonly class ItemFetcher
                 if ($result['state'] !== PromiseInterface::FULFILLED) {
                     throw $result['reason'] instanceof \Throwable ? $result['reason'] : new \RuntimeException('Request rejected', 1764072202);
                 }
-                array_push($items, ...$provider->parse($query, $this->decode($result['value']), $connection));
+                foreach ($provider->parse($query, $this->decode($result['value']), $connection) as $item) {
+                    $items[] = [$item, $connection];
+                }
             } catch (\Throwable $throwable) {
                 $this->logger->warning('Loading {category} of connection {connection} failed: {message}', [
                     'category' => $query->category->value,
@@ -77,8 +79,45 @@ final readonly class ItemFetcher
             }
         }
 
+        $items = $this->enrich($items);
         usort($items, static fn(Item $a, Item $b): int => $b->updatedAt <=> $a->updatedAt);
         return new Overview($items, array_values($errors), new \DateTimeImmutable());
+    }
+
+    /**
+     * Second round, all concurrent: details the list responses lack. A failed detail request keeps the
+     * item as it is, the list itself is complete.
+     *
+     * @param list<array{Item, Connection}> $items
+     * @return list<Item>
+     */
+    private function enrich(array $items): array
+    {
+        $promises = [];
+        foreach ($items as $index => [$item, $connection]) {
+            $request = $this->providers->get($connection->provider)->detailRequest($item, $connection);
+            if ($request !== null) {
+                $promises[$index] = $this->client->sendAsync($request, self::OPTIONS);
+            }
+        }
+
+        $enriched = array_map(static fn(array $entry): Item => $entry[0], $items);
+        foreach (Utils::settle($promises)->wait() as $index => $result) {
+            [$item, $connection] = $items[$index];
+            try {
+                if ($result['state'] !== PromiseInterface::FULFILLED) {
+                    throw $result['reason'] instanceof \Throwable ? $result['reason'] : new \RuntimeException('Request rejected', 1764072205);
+                }
+                $enriched[$index] = $this->providers->get($connection->provider)->enrich($item, $this->decode($result['value']));
+            } catch (\Throwable $throwable) {
+                $this->logger->warning('Loading details of {url} of connection {connection} failed: {message}', [
+                    'url' => $item->url,
+                    'connection' => $connection->uid,
+                    'message' => $throwable->getMessage(),
+                ]);
+            }
+        }
+        return $enriched;
     }
 
     /**

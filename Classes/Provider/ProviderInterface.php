@@ -37,4 +37,14 @@ interface ProviderInterface
      * @return list<Item>
      */
     public function parse(Query $query, array $payload, Connection $connection): array;
+
+    /**
+     * Request for details a list response lacks (labels, author, draft), null if the item is complete.
+     */
+    public function detailRequest(Item $item, Connection $connection): ?RequestInterface;
+
+    /**
+     * @param array<mixed> $payload decoded response of detailRequest()
+     */
+    public function enrich(Item $item, array $payload): Item;
 }

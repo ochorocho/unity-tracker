@@ -13,3 +13,17 @@ CREATE TABLE tx_unitytracker_connection (
 	PRIMARY KEY (uid),
 	KEY be_user (be_user)
 );
+
+# Saved overview filters. Owner edits, members of be_groups (comma list) may use them. No TCA either.
+CREATE TABLE tx_unitytracker_filter (
+	uid int(11) unsigned NOT NULL auto_increment,
+	be_user int(11) unsigned DEFAULT '0' NOT NULL,
+	title varchar(255) DEFAULT '' NOT NULL,
+	definition text,
+	be_groups varchar(255) DEFAULT '' NOT NULL,
+	crdate int(11) unsigned DEFAULT '0' NOT NULL,
+	tstamp int(11) unsigned DEFAULT '0' NOT NULL,
+
+	PRIMARY KEY (uid),
+	KEY be_user (be_user)
+);

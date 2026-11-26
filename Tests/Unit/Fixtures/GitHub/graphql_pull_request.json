@@ -1,0 +1,224 @@
+{
+  "data": {
+    "viewer": {
+      "login": "octocat"
+    },
+    "repository": {
+      "viewerPermission": "WRITE",
+      "labels": {
+        "nodes": [
+          {
+            "name": "bug",
+            "color": "d73a4a"
+          },
+          {
+            "name": "needs review",
+            "color": "0e8a16"
+          }
+        ]
+      },
+      "target": {
+        "title": "Fix login redirect",
+        "state": "OPEN",
+        "url": "https://github.com/acme/app/pull/42",
+        "body": "Fixes login",
+        "bodyHTML": "<p>Fixes login</p>",
+        "createdAt": "2026-11-20T08:15:00Z",
+        "author": {
+          "login": "jane"
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "needs review",
+              "color": "0e8a16"
+            }
+          ]
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "octocat"
+            }
+          ]
+        },
+        "viewerCanUpdate": true,
+        "viewerDidAuthor": false,
+        "viewerCanClose": true,
+        "viewerCanReopen": false,
+        "viewerCanLabel": true,
+        "viewerCanAssign": true,
+        "isDraft": false,
+        "merged": false,
+        "mergeable": "MERGEABLE",
+        "baseRefName": "main",
+        "headRefName": "fix/login",
+        "reviewDecision": "REVIEW_REQUIRED",
+        "viewerLatestReview": null,
+        "pullTimeline": {
+          "pageInfo": {
+            "hasPreviousPage": false,
+            "startCursor": "Y3Vyc29yOnYyOpHOAAA="
+          },
+          "nodes": [
+            {
+              "__typename": "LabeledEvent",
+              "id": "LE_1",
+              "createdAt": "2026-11-20T09:00:00Z",
+              "actor": {
+                "login": "joe"
+              },
+              "label": {
+                "name": "needs review"
+              }
+            },
+            {
+              "databaseId": 9001,
+              "body": "LGTM",
+              "bodyHTML": "<p>LGTM</p>",
+              "createdAt": "2026-11-21T10:00:00Z",
+              "viewerCanUpdate": false,
+              "author": {
+                "login": "joe"
+              },
+              "__typename": "IssueComment",
+              "viewerCanDelete": false
+            },
+            {
+              "__typename": "PullRequestCommit",
+              "id": "PRC_1",
+              "commit": {
+                "abbreviatedOid": "1a2b3c4",
+                "messageHeadline": "Fix the redirect",
+                "committedDate": "2026-11-21T10:30:00Z",
+                "author": {
+                  "name": "Octo Cat",
+                  "user": {
+                    "login": "octocat"
+                  }
+                }
+              }
+            },
+            {
+              "__typename": "PullRequestReview",
+              "id": "PRR_1",
+              "databaseId": 700,
+              "state": "COMMENTED",
+              "body": "",
+              "bodyHTML": "",
+              "createdAt": "2026-11-21T10:40:00Z",
+              "viewerCanUpdate": false,
+              "author": {
+                "login": "joe"
+              }
+            },
+            {
+              "databaseId": 9002,
+              "body": "Fixed",
+              "bodyHTML": "<p>Fixed</p>",
+              "createdAt": "2026-11-21T11:00:00Z",
+              "viewerCanUpdate": true,
+              "author": {
+                "login": "octocat"
+              },
+              "__typename": "IssueComment",
+              "viewerCanDelete": true
+            },
+            {
+              "__typename": "PullRequestReview",
+              "id": "PRR_2",
+              "databaseId": 701,
+              "state": "APPROVED",
+              "body": "",
+              "bodyHTML": "",
+              "createdAt": "2026-11-21T11:30:00Z",
+              "viewerCanUpdate": false,
+              "author": {
+                "login": "joe"
+              }
+            },
+            {
+              "__typename": "SomethingNew",
+              "id": "X_1"
+            }
+          ]
+        },
+        "reviewThreads": {
+          "nodes": [
+            {
+              "id": "PRRT_kwDOabc",
+              "isResolved": false,
+              "path": "src/Login.php",
+              "line": 12,
+              "viewerCanReply": true,
+              "viewerCanResolve": true,
+              "viewerCanUnresolve": false,
+              "comments": {
+                "nodes": [
+                  {
+                    "databaseId": 8001,
+                    "body": "Typo",
+                    "bodyHTML": "<p>Typo</p>",
+                    "createdAt": "2026-11-21T10:40:00Z",
+                    "url": "https://github.com/acme/app/pull/42#discussion_r8001",
+                    "viewerCanUpdate": false,
+                    "viewerCanDelete": false,
+                    "author": {
+                      "login": "joe"
+                    },
+                    "pullRequestReview": {
+                      "id": "PRR_1"
+                    }
+                  },
+                  {
+                    "databaseId": 8002,
+                    "body": "Oops",
+                    "bodyHTML": "<p>Oops</p>",
+                    "createdAt": "2026-11-21T10:50:00Z",
+                    "url": "https://github.com/acme/app/pull/42#discussion_r8002",
+                    "viewerCanUpdate": true,
+                    "viewerCanDelete": true,
+                    "author": {
+                      "login": "octocat"
+                    },
+                    "pullRequestReview": {
+                      "id": "PRR_1"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_unknownReview",
+              "isResolved": false,
+              "path": "x",
+              "line": 1,
+              "viewerCanReply": true,
+              "viewerCanResolve": true,
+              "viewerCanUnresolve": false,
+              "comments": {
+                "nodes": [
+                  {
+                    "databaseId": 8100,
+                    "body": "Elsewhere",
+                    "bodyHTML": "<p>Elsewhere</p>",
+                    "createdAt": "2026-01-01T00:00:00Z",
+                    "url": "https://github.com/acme/app/pull/42#discussion_r8100",
+                    "viewerCanUpdate": false,
+                    "viewerCanDelete": false,
+                    "author": {
+                      "login": "joe"
+                    },
+                    "pullRequestReview": {
+                      "id": "PRR_older"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

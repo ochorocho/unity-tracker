@@ -38,13 +38,28 @@ final readonly class ModuleContext
         private FlashMessageService $flashMessageService,
     ) {}
 
-    public function backendUserId(): int
+    public function backendUser(): BackendUserAuthentication
     {
         $backendUser = $GLOBALS['BE_USER'] ?? null;
         if (!$backendUser instanceof BackendUserAuthentication || !is_array($backendUser->user)) {
             throw new \RuntimeException('The Unity Tracker module needs a logged-in backend user.', 1764072301);
         }
-        return (int)$backendUser->user['uid'];
+        return $backendUser;
+    }
+
+    public function backendUserId(): int
+    {
+        return (int)($this->backendUser()->user['uid'] ?? 0);
+    }
+
+    /**
+     * All groups of the user, subgroups included.
+     *
+     * @return list<int>
+     */
+    public function backendUserGroups(): array
+    {
+        return array_values(array_map(intval(...), $this->backendUser()->userGroupsUID));
     }
 
     public function translate(string $key, string|int ...$arguments): string

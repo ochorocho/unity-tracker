@@ -53,6 +53,7 @@ final readonly class OverviewService
 
     private function identifier(int $backendUser): string
     {
-        return 'overview_' . $backendUser;
+        // Bump the version when Item changes shape: old cache entries are then ignored.
+        return 'overview_v2_' . $backendUser;
     }
 }

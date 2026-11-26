@@ -29,6 +29,11 @@ final readonly class Connection
         return $this->provider->apiBaseUrl($this->host);
     }
 
+    public function graphqlUrl(): string
+    {
+        return $this->provider->graphqlUrl($this->host);
+    }
+
     public function name(): string
     {
         return $this->label !== '' ? $this->label : $this->provider->label() . ' (' . $this->host . ')';

@@ -20,9 +20,6 @@
 			<trans-unit id="overview.attention" resname="overview.attention">
 				<source>Needs attention</source>
 			</trans-unit>
-			<trans-unit id="overview.work" resname="overview.work">
-				<source>My work</source>
-			</trans-unit>
 			<trans-unit id="overview.nothing" resname="overview.nothing">
 				<source>Nothing here.</source>
 			</trans-unit>
@@ -35,8 +32,8 @@
 			<trans-unit id="button.connections" resname="button.connections">
 				<source>Connections</source>
 			</trans-unit>
-			<trans-unit id="button.back" resname="button.back">
-				<source>Back to overview</source>
+			<trans-unit id="button.close" resname="button.close">
+				<source>Close</source>
 			</trans-unit>
 			<trans-unit id="category.todo" resname="category.todo">
 				<source>To-dos and notifications</source>
@@ -52,6 +49,12 @@
 			</trans-unit>
 			<trans-unit id="category.assignedIssue" resname="category.assignedIssue">
 				<source>Issues assigned to me</source>
+			</trans-unit>
+			<trans-unit id="sort.ascending" resname="sort.ascending">
+				<source>Sort ascending</source>
+			</trans-unit>
+			<trans-unit id="sort.descending" resname="sort.descending">
+				<source>Sort descending</source>
 			</trans-unit>
 			<trans-unit id="column.title" resname="column.title">
 				<source>Title</source>
@@ -166,6 +169,501 @@
 			</trans-unit>
 			<trans-unit id="error.fetch.failed" resname="error.fetch.failed">
 				<source>The request failed: %2$s</source>
+			</trans-unit>
+			<trans-unit id="button.filters" resname="button.filters">
+				<source>Filters</source>
+			</trans-unit>
+			<trans-unit id="filters.title" resname="filters.title">
+				<source>Filters</source>
+			</trans-unit>
+			<trans-unit id="filters.intro" resname="filters.intro">
+				<source>Build a filter in the overview and save it here. Share it with backend groups: their members can use it on their own connections, only you can change it.</source>
+			</trans-unit>
+			<trans-unit id="filters.own" resname="filters.own">
+				<source>My filters</source>
+			</trans-unit>
+			<trans-unit id="filters.shared" resname="filters.shared">
+				<source>Shared with me</source>
+			</trans-unit>
+			<trans-unit id="filters.none" resname="filters.none">
+				<source>You have no saved filters yet. Build one in the overview and click "Save filter".</source>
+			</trans-unit>
+			<trans-unit id="filters.sharedNone" resname="filters.sharedNone">
+				<source>Nobody shares a filter with your groups.</source>
+			</trans-unit>
+			<trans-unit id="filters.private" resname="filters.private">
+				<source>Private</source>
+			</trans-unit>
+			<trans-unit id="filters.column.title" resname="filters.column.title">
+				<source>Name</source>
+			</trans-unit>
+			<trans-unit id="filters.column.filter" resname="filters.column.filter">
+				<source>Filter</source>
+			</trans-unit>
+			<trans-unit id="filters.column.groups" resname="filters.column.groups">
+				<source>Shared with</source>
+			</trans-unit>
+			<trans-unit id="filters.column.owner" resname="filters.column.owner">
+				<source>Owner</source>
+			</trans-unit>
+			<trans-unit id="filters.editAction" resname="filters.editAction">
+				<source>Edit</source>
+			</trans-unit>
+			<trans-unit id="filters.delete" resname="filters.delete">
+				<source>Delete</source>
+			</trans-unit>
+			<trans-unit id="filters.new" resname="filters.new">
+				<source>Save filter</source>
+			</trans-unit>
+			<trans-unit id="filters.edit" resname="filters.edit">
+				<source>Edit filter</source>
+			</trans-unit>
+			<trans-unit id="filters.form.groups" resname="filters.form.groups">
+				<source>Share with backend groups</source>
+			</trans-unit>
+			<trans-unit id="filters.form.groups.description" resname="filters.form.groups.description">
+				<source>Members of these groups can use the filter. Leave all unchecked to keep it private.</source>
+			</trans-unit>
+			<trans-unit id="filters.form.submit" resname="filters.form.submit">
+				<source>Save</source>
+			</trans-unit>
+			<trans-unit id="filters.saved" resname="filters.saved">
+				<source>Filter "%s" saved.</source>
+			</trans-unit>
+			<trans-unit id="filters.deleted" resname="filters.deleted">
+				<source>Filter deleted.</source>
+			</trans-unit>
+			<trans-unit id="filters.error.title" resname="filters.error.title">
+				<source>Please enter a name.</source>
+			</trans-unit>
+			<trans-unit id="filters.error.definition" resname="filters.error.definition">
+				<source>The filter is empty or invalid.</source>
+			</trans-unit>
+			<trans-unit id="filters.error.notFound" resname="filters.error.notFound">
+				<source>The filter does not exist or is not yours.</source>
+			</trans-unit>
+			<trans-unit id="filter.search" resname="filter.search">
+				<source>Text</source>
+			</trans-unit>
+			<trans-unit id="filter.placeholder" resname="filter.placeholder">
+				<source>Search or filter results…</source>
+			</trans-unit>
+			<trans-unit id="filter.clear" resname="filter.clear">
+				<source>Clear filter</source>
+			</trans-unit>
+			<trans-unit id="filter.save" resname="filter.save">
+				<source>Save filter</source>
+			</trans-unit>
+			<trans-unit id="filter.update" resname="filter.update">
+				<source>Update filter</source>
+			</trans-unit>
+			<trans-unit id="filter.saved" resname="filter.saved">
+				<source>Saved filters</source>
+			</trans-unit>
+			<trans-unit id="filter.savedNone" resname="filter.savedNone">
+				<source>No saved filters</source>
+			</trans-unit>
+			<trans-unit id="filter.manage" resname="filter.manage">
+				<source>Manage filters</source>
+			</trans-unit>
+			<trans-unit id="filter.own" resname="filter.own">
+				<source>Mine</source>
+			</trans-unit>
+			<trans-unit id="filter.shared" resname="filter.shared">
+				<source>Shared with me</source>
+			</trans-unit>
+			<trans-unit id="filter.searchFor" resname="filter.searchFor">
+				<source>Search for "%s"</source>
+			</trans-unit>
+			<trans-unit id="filter.noResults" resname="filter.noResults">
+				<source>No items match the filter.</source>
+			</trans-unit>
+			<trans-unit id="filter.removeToken" resname="filter.removeToken">
+				<source>Remove %s</source>
+			</trans-unit>
+			<trans-unit id="filter.field.author" resname="filter.field.author">
+				<source>Author</source>
+			</trans-unit>
+			<trans-unit id="filter.field.label" resname="filter.field.label">
+				<source>Label</source>
+			</trans-unit>
+			<trans-unit id="filter.field.project" resname="filter.field.project">
+				<source>Project</source>
+			</trans-unit>
+			<trans-unit id="filter.field.connection" resname="filter.field.connection">
+				<source>Connection</source>
+			</trans-unit>
+			<trans-unit id="filter.field.provider" resname="filter.field.provider">
+				<source>Provider</source>
+			</trans-unit>
+			<trans-unit id="filter.field.type" resname="filter.field.type">
+				<source>Type</source>
+			</trans-unit>
+			<trans-unit id="filter.field.reason" resname="filter.field.reason">
+				<source>Reason</source>
+			</trans-unit>
+			<trans-unit id="filter.field.draft" resname="filter.field.draft">
+				<source>Draft</source>
+			</trans-unit>
+			<trans-unit id="filter.operator.is" resname="filter.operator.is">
+				<source>is</source>
+			</trans-unit>
+			<trans-unit id="filter.operator.isNot" resname="filter.operator.isNot">
+				<source>is not</source>
+			</trans-unit>
+			<trans-unit id="filter.value.yes" resname="filter.value.yes">
+				<source>yes</source>
+			</trans-unit>
+			<trans-unit id="filter.value.no" resname="filter.value.no">
+				<source>no</source>
+			</trans-unit>
+			<trans-unit id="item.title" resname="item.title">
+				<source>Details</source>
+			</trans-unit>
+			<trans-unit id="item.openExternal" resname="item.openExternal">
+				<source>Open in %s</source>
+			</trans-unit>
+			<trans-unit id="item.openedBy" resname="item.openedBy">
+				<source>opened by %s</source>
+			</trans-unit>
+			<trans-unit id="item.state.open" resname="item.state.open">
+				<source>Open</source>
+			</trans-unit>
+			<trans-unit id="item.state.closed" resname="item.state.closed">
+				<source>Closed</source>
+			</trans-unit>
+			<trans-unit id="item.state.merged" resname="item.state.merged">
+				<source>Merged</source>
+			</trans-unit>
+			<trans-unit id="item.readOnly" resname="item.readOnly">
+				<source>Your token can only read. Give it the "%s" scope to comment, review, merge and edit from here.</source>
+			</trans-unit>
+			<trans-unit id="item.assignees" resname="item.assignees">
+				<source>Assignees</source>
+			</trans-unit>
+			<trans-unit id="item.labels" resname="item.labels">
+				<source>Labels</source>
+			</trans-unit>
+			<trans-unit id="item.none" resname="item.none">
+				<source>None</source>
+			</trans-unit>
+			<trans-unit id="item.description" resname="item.description">
+				<source>Description</source>
+			</trans-unit>
+			<trans-unit id="item.noDescription" resname="item.noDescription">
+				<source>No description.</source>
+			</trans-unit>
+			<trans-unit id="item.activity" resname="item.activity">
+				<source>Activity</source>
+			</trans-unit>
+			<trans-unit id="item.noComments" resname="item.noComments">
+				<source>No comments yet.</source>
+			</trans-unit>
+			<trans-unit id="item.field.title" resname="item.field.title">
+				<source>Title</source>
+			</trans-unit>
+			<trans-unit id="item.field.description" resname="item.field.description">
+				<source>Description (Markdown)</source>
+			</trans-unit>
+			<trans-unit id="item.field.comment" resname="item.field.comment">
+				<source>Comment (Markdown)</source>
+			</trans-unit>
+			<trans-unit id="item.action.close" resname="item.action.close">
+				<source>Close</source>
+			</trans-unit>
+			<trans-unit id="item.action.reopen" resname="item.action.reopen">
+				<source>Reopen</source>
+			</trans-unit>
+			<trans-unit id="item.action.approve" resname="item.action.approve">
+				<source>Approve</source>
+			</trans-unit>
+			<trans-unit id="item.action.unapprove" resname="item.action.unapprove">
+				<source>Revoke approval</source>
+			</trans-unit>
+			<trans-unit id="item.action.requestChanges" resname="item.action.requestChanges">
+				<source>Request changes</source>
+			</trans-unit>
+			<trans-unit id="item.action.merge" resname="item.action.merge">
+				<source>Merge</source>
+			</trans-unit>
+			<trans-unit id="item.action.assignMe" resname="item.action.assignMe">
+				<source>Assign to me</source>
+			</trans-unit>
+			<trans-unit id="item.action.unassignMe" resname="item.action.unassignMe">
+				<source>Unassign me</source>
+			</trans-unit>
+			<trans-unit id="item.action.addLabel" resname="item.action.addLabel">
+				<source>Add label</source>
+			</trans-unit>
+			<trans-unit id="item.action.removeLabel" resname="item.action.removeLabel">
+				<source>Remove label %s</source>
+			</trans-unit>
+			<trans-unit id="item.action.edit" resname="item.action.edit">
+				<source>Edit title and description</source>
+			</trans-unit>
+			<trans-unit id="item.action.save" resname="item.action.save">
+				<source>Save</source>
+			</trans-unit>
+			<trans-unit id="item.action.comment" resname="item.action.comment">
+				<source>Comment</source>
+			</trans-unit>
+			<trans-unit id="item.action.markDone.issue" resname="item.action.markDone.issue">
+				<source>Mark to-do as done</source>
+			</trans-unit>
+			<trans-unit id="item.action.markDone.merge_request" resname="item.action.markDone.merge_request">
+				<source>Mark to-do as done</source>
+			</trans-unit>
+			<trans-unit id="item.action.markDone.pull_request" resname="item.action.markDone.pull_request">
+				<source>Mark notification as read</source>
+			</trans-unit>
+			<trans-unit id="item.confirm.merge" resname="item.confirm.merge">
+				<source>Merge %s into %s?</source>
+			</trans-unit>
+			<trans-unit id="item.done.comment" resname="item.done.comment">
+				<source>Comment added.</source>
+			</trans-unit>
+			<trans-unit id="item.done.edit" resname="item.done.edit">
+				<source>Title and description saved.</source>
+			</trans-unit>
+			<trans-unit id="item.done.close" resname="item.done.close">
+				<source>Closed.</source>
+			</trans-unit>
+			<trans-unit id="item.done.reopen" resname="item.done.reopen">
+				<source>Reopened.</source>
+			</trans-unit>
+			<trans-unit id="item.done.assignMe" resname="item.done.assignMe">
+				<source>Assigned to you.</source>
+			</trans-unit>
+			<trans-unit id="item.done.unassignMe" resname="item.done.unassignMe">
+				<source>You are no longer assigned.</source>
+			</trans-unit>
+			<trans-unit id="item.done.addLabel" resname="item.done.addLabel">
+				<source>Label added.</source>
+			</trans-unit>
+			<trans-unit id="item.done.removeLabel" resname="item.done.removeLabel">
+				<source>Label removed.</source>
+			</trans-unit>
+			<trans-unit id="item.done.approve" resname="item.done.approve">
+				<source>Approved.</source>
+			</trans-unit>
+			<trans-unit id="item.done.unapprove" resname="item.done.unapprove">
+				<source>Approval revoked.</source>
+			</trans-unit>
+			<trans-unit id="item.done.requestChanges" resname="item.done.requestChanges">
+				<source>Changes requested.</source>
+			</trans-unit>
+			<trans-unit id="item.done.merge" resname="item.done.merge">
+				<source>Merged.</source>
+			</trans-unit>
+			<trans-unit id="item.done.markDone" resname="item.done.markDone">
+				<source>Done.</source>
+			</trans-unit>
+			<trans-unit id="item.error.title" resname="item.error.title">
+				<source>Could not load the details</source>
+			</trans-unit>
+			<trans-unit id="item.error.reference" resname="item.error.reference">
+				<source>This item cannot be shown here.</source>
+			</trans-unit>
+			<trans-unit id="item.error.notAllowed" resname="item.error.notAllowed">
+				<source>You are not allowed to do that (any more). The details below are up to date.</source>
+			</trans-unit>
+			<trans-unit id="item.error.body" resname="item.error.body">
+				<source>Please enter a text.</source>
+			</trans-unit>
+			<trans-unit id="item.error.edit" resname="item.error.edit">
+				<source>Please enter a title (the description may be up to 1 MB).</source>
+			</trans-unit>
+			<trans-unit id="item.error.label" resname="item.error.label">
+				<source>Unknown label.</source>
+			</trans-unit>
+			<trans-unit id="item.action.cancel" resname="item.action.cancel">
+				<source>Cancel</source>
+			</trans-unit>
+			<trans-unit id="item.action.editComment" resname="item.action.editComment">
+				<source>Edit</source>
+			</trans-unit>
+			<trans-unit id="item.done.editComment" resname="item.done.editComment">
+				<source>Comment saved.</source>
+			</trans-unit>
+			<trans-unit id="item.showOlder" resname="item.showOlder">
+				<source>Show older activity</source>
+			</trans-unit>
+			<trans-unit id="item.viewDiff" resname="item.viewDiff">
+				<source>View in diff</source>
+			</trans-unit>
+			<trans-unit id="item.resolved" resname="item.resolved">
+				<source>Resolved</source>
+			</trans-unit>
+			<trans-unit id="item.field.reply" resname="item.field.reply">
+				<source>Reply (Markdown)</source>
+			</trans-unit>
+			<trans-unit id="item.action.reply" resname="item.action.reply">
+				<source>Reply</source>
+			</trans-unit>
+			<trans-unit id="item.action.resolve" resname="item.action.resolve">
+				<source>Resolve thread</source>
+			</trans-unit>
+			<trans-unit id="item.action.unresolve" resname="item.action.unresolve">
+				<source>Unresolve thread</source>
+			</trans-unit>
+			<trans-unit id="item.action.deleteComment" resname="item.action.deleteComment">
+				<source>Delete</source>
+			</trans-unit>
+			<trans-unit id="item.confirm.deleteComment" resname="item.confirm.deleteComment">
+				<source>Delete this comment? This cannot be undone.</source>
+			</trans-unit>
+			<trans-unit id="item.done.reply" resname="item.done.reply">
+				<source>Reply added.</source>
+			</trans-unit>
+			<trans-unit id="item.done.resolve" resname="item.done.resolve">
+				<source>Thread resolved.</source>
+			</trans-unit>
+			<trans-unit id="item.done.unresolve" resname="item.done.unresolve">
+				<source>Thread reopened.</source>
+			</trans-unit>
+			<trans-unit id="item.done.deleteComment" resname="item.done.deleteComment">
+				<source>Comment deleted.</source>
+			</trans-unit>
+			<trans-unit id="item.review.approved" resname="item.review.approved">
+				<source>Approved</source>
+			</trans-unit>
+			<trans-unit id="item.review.changes_requested" resname="item.review.changes_requested">
+				<source>Changes requested</source>
+			</trans-unit>
+			<trans-unit id="item.review.commented" resname="item.review.commented">
+				<source>Reviewed</source>
+			</trans-unit>
+			<trans-unit id="item.review.dismissed" resname="item.review.dismissed">
+				<source>Review dismissed</source>
+			</trans-unit>
+			<trans-unit id="item.event.labeled" resname="item.event.labeled">
+				<source>added label %s</source>
+			</trans-unit>
+			<trans-unit id="item.event.unlabeled" resname="item.event.unlabeled">
+				<source>removed label %s</source>
+			</trans-unit>
+			<trans-unit id="item.event.assigned" resname="item.event.assigned">
+				<source>assigned %s</source>
+			</trans-unit>
+			<trans-unit id="item.event.unassigned" resname="item.event.unassigned">
+				<source>unassigned %s</source>
+			</trans-unit>
+			<trans-unit id="item.event.closed" resname="item.event.closed">
+				<source>closed this</source>
+			</trans-unit>
+			<trans-unit id="item.event.closedNotPlanned" resname="item.event.closedNotPlanned">
+				<source>closed this as not planned</source>
+			</trans-unit>
+			<trans-unit id="item.event.reopened" resname="item.event.reopened">
+				<source>reopened this</source>
+			</trans-unit>
+			<trans-unit id="item.event.renamed" resname="item.event.renamed">
+				<source>changed the title to "%s"</source>
+			</trans-unit>
+			<trans-unit id="item.event.milestoned" resname="item.event.milestoned">
+				<source>added this to milestone %s</source>
+			</trans-unit>
+			<trans-unit id="item.event.demilestoned" resname="item.event.demilestoned">
+				<source>removed this from milestone %s</source>
+			</trans-unit>
+			<trans-unit id="item.event.referenced" resname="item.event.referenced">
+				<source>mentioned this in %s</source>
+			</trans-unit>
+			<trans-unit id="item.event.locked" resname="item.event.locked">
+				<source>locked the conversation</source>
+			</trans-unit>
+			<trans-unit id="item.event.unlocked" resname="item.event.unlocked">
+				<source>unlocked the conversation</source>
+			</trans-unit>
+			<trans-unit id="item.event.merged" resname="item.event.merged">
+				<source>merged this</source>
+			</trans-unit>
+			<trans-unit id="item.event.reviewRequested" resname="item.event.reviewRequested">
+				<source>requested a review from %s</source>
+			</trans-unit>
+			<trans-unit id="item.event.reviewRequestRemoved" resname="item.event.reviewRequestRemoved">
+				<source>removed the review request for %s</source>
+			</trans-unit>
+			<trans-unit id="item.event.readyForReview" resname="item.event.readyForReview">
+				<source>marked this as ready for review</source>
+			</trans-unit>
+			<trans-unit id="item.event.convertedToDraft" resname="item.event.convertedToDraft">
+				<source>marked this as draft</source>
+			</trans-unit>
+			<trans-unit id="item.event.forcePushed" resname="item.event.forcePushed">
+				<source>force-pushed the branch</source>
+			</trans-unit>
+			<trans-unit id="item.event.committed" resname="item.event.committed">
+				<source>added commit %s</source>
+			</trans-unit>
+			<trans-unit id="item.event.approved" resname="item.event.approved">
+				<source>approved these changes</source>
+			</trans-unit>
+			<trans-unit id="item.event.changesRequested" resname="item.event.changesRequested">
+				<source>requested changes</source>
+			</trans-unit>
+			<trans-unit id="item.event.reviewDismissed" resname="item.event.reviewDismissed">
+				<source>had a review dismissed</source>
+			</trans-unit>
+			<trans-unit id="editor.write" resname="editor.write">
+				<source>Write</source>
+			</trans-unit>
+			<trans-unit id="editor.preview" resname="editor.preview">
+				<source>Preview</source>
+			</trans-unit>
+			<trans-unit id="editor.toolbar" resname="editor.toolbar">
+				<source>Formatting</source>
+			</trans-unit>
+			<trans-unit id="editor.bold" resname="editor.bold">
+				<source>Bold (Ctrl/⌘+B)</source>
+			</trans-unit>
+			<trans-unit id="editor.italic" resname="editor.italic">
+				<source>Italic (Ctrl/⌘+I)</source>
+			</trans-unit>
+			<trans-unit id="editor.strikethrough" resname="editor.strikethrough">
+				<source>Strikethrough</source>
+			</trans-unit>
+			<trans-unit id="editor.heading" resname="editor.heading">
+				<source>Heading</source>
+			</trans-unit>
+			<trans-unit id="editor.quote" resname="editor.quote">
+				<source>Quote</source>
+			</trans-unit>
+			<trans-unit id="editor.code" resname="editor.code">
+				<source>Code</source>
+			</trans-unit>
+			<trans-unit id="editor.link" resname="editor.link">
+				<source>Link (Ctrl/⌘+K)</source>
+			</trans-unit>
+			<trans-unit id="editor.bulletList" resname="editor.bulletList">
+				<source>Bulleted list</source>
+			</trans-unit>
+			<trans-unit id="editor.numberedList" resname="editor.numberedList">
+				<source>Numbered list</source>
+			</trans-unit>
+			<trans-unit id="editor.taskList" resname="editor.taskList">
+				<source>Task list</source>
+			</trans-unit>
+			<trans-unit id="editor.table" resname="editor.table">
+				<source>Table</source>
+			</trans-unit>
+			<trans-unit id="editor.collapsible" resname="editor.collapsible">
+				<source>Collapsible section</source>
+			</trans-unit>
+			<trans-unit id="editor.nothingToPreview" resname="editor.nothingToPreview">
+				<source>Nothing to preview.</source>
+			</trans-unit>
+			<trans-unit id="editor.previewFailed" resname="editor.previewFailed">
+				<source>The preview could not be loaded.</source>
+			</trans-unit>
+			<trans-unit id="editor.loading" resname="editor.loading">
+				<source>Loading…</source>
+			</trans-unit>
+			<trans-unit id="editor.hint" resname="editor.hint">
+				<source>Markdown is supported. Type @ for people, # for issues, : for emoji. Ctrl/⌘+Enter saves.</source>
+			</trans-unit>
+			<trans-unit id="editor.requestFailed" resname="editor.requestFailed">
+				<source>The request failed. Please try again.</source>
 			</trans-unit>
 		</body>
 	</file>

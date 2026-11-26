@@ -36,13 +36,25 @@ final readonly class ConnectionController
 
     public function listAction(ServerRequestInterface $request): ResponseInterface
     {
-        $query = $request->getQueryParams();
         $view = $this->moduleTemplateFactory->create($request);
         $view->setTitle($this->context->translate('connections.title'));
-        $this->context->addButton($view, $this->context->uri(), 'button.back', 'actions-view-go-back', 1);
+        $this->context->addButton($view, $this->context->uri('newConnection'), 'connections.add', 'actions-plus', 1);
 
         $view->assignMultiple([
             'connections' => $this->connectionRepository->findByBackendUser($this->context->backendUserId()),
+            'deleteUri' => $this->context->uri('deleteConnection'),
+        ]);
+        return $view->renderResponse('Connections');
+    }
+
+    public function newAction(ServerRequestInterface $request): ResponseInterface
+    {
+        $query = $request->getQueryParams();
+        $view = $this->moduleTemplateFactory->create($request);
+        $view->setTitle($this->context->translate('connections.add'));
+        $this->context->addButton($view, $this->context->uri('connections'), 'button.close', 'actions-close', 1);
+
+        $view->assignMultiple([
             'providers' => array_map(static fn(Provider $provider): array => [
                 'value' => $provider->value,
                 'label' => $provider->label(),
@@ -55,9 +67,8 @@ final readonly class ConnectionController
                 'label' => is_string($query['label'] ?? null) ? $query['label'] : '',
             ],
             'addUri' => $this->context->uri('addConnection'),
-            'deleteUri' => $this->context->uri('deleteConnection'),
         ]);
-        return $view->renderResponse('Connections');
+        return $view->renderResponse('ConnectionForm');
     }
 
     public function addAction(ServerRequestInterface $request): ResponseInterface
@@ -117,6 +128,6 @@ final readonly class ConnectionController
     private function failed(string $message, array $form): ResponseInterface
     {
         $this->context->flash($message, ContextualFeedbackSeverity::ERROR);
-        return $this->context->redirect('connections', $form);
+        return $this->context->redirect('newConnection', $form);
     }
 }

@@ -17,26 +17,20 @@
                 <f:be.infobox title="{error.title}" state="2">{error.message}</f:be.infobox>
             </f:for>
 
-            <h2>
-                <f:translate key="overview.attention" extensionName="UnityTracker" />
-                <span class="badge badge-{f:if(condition: attentionCount, then: 'warning', else: 'success')}" data-attention-count="{attentionCount}">{attentionCount}</span>
-            </h2>
-            <f:if condition="!{attentionCount}">
-                <p><f:translate key="overview.allDone" extensionName="UnityTracker" /></p>
-            </f:if>
-            <f:for each="{attention}" as="section">
-                <f:render partial="ItemTable" arguments="{category: section.category, items: section.items}" />
-            </f:for>
-
-            <h2><f:translate key="overview.work" extensionName="UnityTracker" /></h2>
-            <f:for each="{work}" as="section">
-                <f:render partial="ItemTable" arguments="{category: section.category, items: section.items}" />
-            </f:for>
+            <unity-tracker-overview
+                class="d-block"
+                items="{component.items}"
+                categories="{component.categories}"
+                labels="{component.labels}"
+                filters="{component.filters}"
+                active-filter="{component.activeFilter}"
+                urls="{component.urls}"
+            ></unity-tracker-overview>
         </f:then>
         <f:else>
             <f:be.infobox title="{f:translate(key: 'overview.empty.title', extensionName: 'UnityTracker')}" state="-1">
                 <p><f:translate key="overview.empty.text" extensionName="UnityTracker" /></p>
-                <a class="btn btn-primary" href="{connectionsUri}"><f:translate key="overview.empty.action" extensionName="UnityTracker" /></a>
+                <a class="btn btn-primary" href="{newConnectionUri}"><f:translate key="overview.empty.action" extensionName="UnityTracker" /></a>
             </f:be.infobox>
         </f:else>
     </f:if>

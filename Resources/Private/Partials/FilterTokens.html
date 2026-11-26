@@ -1,0 +1,10 @@
+<html
+    xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+    data-namespace-typo3-fluid="true"
+>
+<span class="d-inline-flex flex-wrap gap-1" data-filter-tokens>
+    <f:for each="{tokens}" as="token">
+        <span class="badge badge-default"><f:if condition="{token.operator}"><f:then>{token.field} {token.operator} {token.value}</f:then><f:else>{token.field}: {token.value}</f:else></f:if></span>
+    </f:for>
+</span>
+</html>

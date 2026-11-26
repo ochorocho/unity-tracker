@@ -85,6 +85,9 @@ final readonly class GitLabProvider implements ProviderInterface
             $this->labels($target),
             Payload::string($todo, 'action_name'),
             Payload::bool($target, 'draft'),
+            $connection->uid,
+            (int)Payload::string($target, 'iid'),
+            Payload::string($todo, 'id'),
         );
     }
 
@@ -98,6 +101,7 @@ final readonly class GitLabProvider implements ProviderInterface
         $short = Payload::string($entry, 'references', 'short');
         $full = Payload::string($entry, 'references', 'full');
         $project = $short !== '' && str_ends_with($full, $short) ? substr($full, 0, -strlen($short)) : '';
+        // Issue/MR lists embed no project path; the full reference ("group/project#3") has it.
 
         return new Item(
             $category,
@@ -113,7 +117,22 @@ final readonly class GitLabProvider implements ProviderInterface
             $this->labels($entry),
             '',
             Payload::bool($entry, 'draft'),
+            $connection->uid,
+            (int)Payload::string($entry, 'iid'),
         );
+    }
+
+    /**
+     * To-dos embed their target, lists are complete: nothing to add.
+     */
+    public function detailRequest(Item $item, Connection $connection): ?RequestInterface
+    {
+        return null;
+    }
+
+    public function enrich(Item $item, array $payload): Item
+    {
+        return $item;
     }
 
     /**

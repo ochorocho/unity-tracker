@@ -33,18 +33,4 @@ final readonly class Overview
     {
         return array_values(array_filter($this->items, static fn(Item $item): bool => $item->category === $category));
     }
-
-    /**
-     * Distinct things waiting for the user; a review request that is also a to-do counts once.
-     */
-    public function attentionCount(): int
-    {
-        $urls = [];
-        foreach ($this->items as $item) {
-            if ($item->category->needsAttention()) {
-                $urls[$item->url] = true;
-            }
-        }
-        return count($urls);
-    }
 }

@@ -126,6 +126,46 @@ final class GitHubProviderTest extends UnitTestCase
         self::assertSame([], $item->labels);
     }
 
+    #[Test]
+    public function notificationDetailsComeFromTheRepositoryApi(): void
+    {
+        [$pullRequest, $issue, $release] = $this->parse(Category::Todo, 'GitHub/notifications.json');
+        $connection = Fixture::connection(Provider::GitHub);
+
+        self::assertSame('https://api.github.com/repos/acme/app/pulls/42', (string)$this->subject->detailRequest($pullRequest, $connection)?->getUri());
+        self::assertSame('https://api.github.com/repos/acme/app/issues/9', (string)$this->subject->detailRequest($issue, $connection)?->getUri());
+        self::assertNull($this->subject->detailRequest($release, $connection));
+    }
+
+    #[Test]
+    public function searchResultsNeedNoDetails(): void
+    {
+        $item = $this->parse(Category::ReviewRequested, 'GitHub/search_pulls.json')[0];
+
+        self::assertNull($this->subject->detailRequest($item, Fixture::connection(Provider::GitHub)));
+    }
+
+    #[Test]
+    public function notificationOfUnexpectedRepositoryNameGetsNoDetailRequest(): void
+    {
+        $item = $this->parse(Category::Todo, 'GitHub/notifications.json')[0];
+        $foreign = new Item(Category::Todo, Provider::GitHub, 'GitHub', 'pull_request', 'x', '', 'acme/../../user', '#42', '', new \DateTimeImmutable());
+
+        self::assertNotNull($this->subject->detailRequest($item, Fixture::connection(Provider::GitHub)));
+        self::assertNull($this->subject->detailRequest($foreign, Fixture::connection(Provider::GitHub)));
+    }
+
+    #[Test]
+    public function enrichAddsAuthorLabelsAndDraft(): void
+    {
+        $item = $this->parse(Category::Todo, 'GitHub/notifications.json')[0];
+
+        $enriched = $this->subject->enrich($item, Fixture::payload('GitHub/pull_42.json'));
+
+        self::assertSame(['octocat', ['bug', 'needs review'], true], [$enriched->author, $enriched->labels, $enriched->draft]);
+        self::assertSame([$item->title, $item->reason, $item->url], [$enriched->title, $enriched->reason, $enriched->url]);
+    }
+
     /**
      * @return list<Item>
      */

@@ -15,15 +15,81 @@ Module **User › Unity Tracker**, per backend user:
 | My work: my open merge/pull requests | `scope=created_by_me` | `author:@me` |
 | My work: issues assigned to me | `scope=assigned_to_me` | `assignee:@me` |
 
-Up to 50 entries per list, newest first. Archived GitHub repositories are excluded.
+Up to 50 entries per list, newest first. Archived GitHub repositories are excluded. Each section is
+a tab, every column can be sorted. GitHub notifications have no labels or author, so each issue/pull
+request notification costs one extra request (cached with the overview) that adds them.
+
+## Details and actions
+
+Clicking an issue, merge request or pull request opens it in a sheet (TYPO3 v14: the side sheet of
+contextual editing; v13: a large modal): description, labels, assignees and the activity. The
+icon next to the title opens it on GitLab/GitHub; other items (releases, pipelines, …) link there
+directly.
+
+The sheet offers only what the API says the token's user may do, and checks it again before sending:
+
+| Action | GitLab | GitHub |
+|---|---|---|
+| Comment | ✓ | ✓ |
+| Close / reopen | ✓ | ✓ |
+| Edit title and description | ✓ | ✓ |
+| Assign / unassign me, add / remove label | ✓ | ✓ |
+| Approve / revoke approval | merge requests | approve (pull requests) |
+| Request changes | – | pull requests |
+| Merge (with confirmation) | ✓ | ✓ |
+| Mark to-do done / notification read | to-dos | notifications |
+| Edit / delete own comments | ✓ | ✓ (submitted reviews: edit only) |
+| Reply to a thread | discussions | review threads |
+| Resolve / unresolve a thread | resolvable discussions | review threads |
+
+The activity reads like on the provider: comments, threads (GitLab discussions incl. diff threads, GitHub
+review threads, with file and line) and events (GitLab system notes; GitHub labels, assignees, commits,
+reviews, references, …), newest page first; "Show older activity" loads the pages before (route `itemActivity`).
+
+Details come from one GraphQL query per item (rendered HTML and the user's permissions), actions
+use the REST API. Actions run in the background: the sheet updates in place, the overview reloads
+when the sheet is closed. Title, description and your own comments are edited inline. GitHub threads
+are resolved through GraphQL mutations (no REST endpoint), GitLab threads through `discussionToggleResolve`.
+
+Images in descriptions and comments are loaded by TYPO3 and served from the backend (route
+`itemImage`): the backend's Content-Security-Policy blocks other origins, and uploads of non-public
+GitLab projects need the token. Only https images on the provider's own hosts are fetched
+(GitLab: the instance, gitlab.com's `user-content.gitlab-static.net`; github.com: `camo` and
+`*.githubusercontent.com`; GitHub Enterprise: the instance and `media.<host>`), at most 10 MB, image
+types only. Other images show their alt text.
+
+Comments and descriptions are written in a Markdown editor like GitLab's: Write/Preview (rendered by
+GitLab/GitHub, so references and emoji look as they will), a formatting toolbar, Ctrl/⌘+B/I/K and
+Ctrl/⌘+Enter to save, and suggestions while typing: `@` people, `#` issues (GitHub: and pull
+requests), `!` merge requests and `~` labels (GitLab), `:` emoji.
+
+## Filters
+
+The bar above the tabs filters all tabs at once, in the browser, like GitLab's filtered search:
+pick a field, `is` or `is not`, then a value (suggested from the loaded items, or typed). Plain text
+plus Enter searches title, reference and project. All tokens must hold. Backspace in the empty input
+removes the last token.
+
+| Field | Matches |
+|---|---|
+| Author, Project, Connection, Provider, Type, Reason | the item's value (case-insensitive) |
+| Label | one of the item's labels (labels are not shown in the table) |
+| Draft | `yes` / `no` |
+
+**Save filter** names the current filter and shares it with backend groups (your own groups; admins
+can pick any). Members of those groups find it under **Saved filters** and in **Filters**, applied to
+their own connections; only the owner can change or delete it. A saved filter's link
+(`…/unity-tracker?filter=<uid>`) opens the overview with it applied. Filters are stored in
+`tx_unitytracker_filter`, without TCA.
 
 ## Connections
 
 Every backend user manages their own connections under **Connections** in the module. Any number
 of them, for example gitlab.com, a self-managed GitLab, github.com and GitHub Enterprise Server.
 
-- Personal access token scopes: GitLab `read_api`. GitHub: a classic token with `repo` and
-  `notifications`. Fine-grained GitHub tokens can't read notifications.
+- Personal access token scopes: GitLab `api` (`read_api` is enough to read; the detail sheet is then
+  read-only and says so). GitHub: a classic token with `repo` and `notifications`. Fine-grained GitHub
+  tokens can't read notifications.
 - The token is checked against the API (`/user`) before it is saved, and the account name is stored.
 - Tokens are encrypted with libsodium, using a key derived from TYPO3's `encryptionKey`. If that
   key changes, the module asks you to add the connection again.

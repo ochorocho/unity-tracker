@@ -196,9 +196,13 @@ foreach ([
     }
 }
 
-// Playwright sends `X-Test-Run: 1` on every request → isolated `test` database.
+// Playwright sends `X-Test-Run: 1` on every request → isolated `test` database, and a fake GitLab
+// (https://gitlab.fake.test, answered inside TYPO3's Guzzle stack, no network).
 if (($_SERVER['HTTP_X_TEST_RUN'] ?? '') === '1') {
     $GLOBALS['TYPO3_CONF_VARS']['DB']['Connections']['Default']['dbname'] = 'test';
+    require_once '/var/www/html/Tests/playwright/fake-gitlab/FakeGitLab.php';
+    $GLOBALS['TYPO3_CONF_VARS']['HTTP']['handler']['unitytracker-fake-gitlab'] = \Ochorocho\UnityTracker\Tests\Playwright\FakeGitLab::middleware();
+    $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['unity_tracker']['allowedHosts'] = \Ochorocho\UnityTracker\Tests\Playwright\FakeGitLab::HOST;
 }
 
 // CLI: `TYPO3_DB_NAME=test vendor/bin/typo3 …`

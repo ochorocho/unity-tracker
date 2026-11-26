@@ -1,0 +1,191 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of TYPO3 CMS-based extension "unity_tracker" by ochorocho.
+ */
+
+namespace Ochorocho\UnityTracker\Tests\Unit\Detail;
+
+use GuzzleHttp\Psr7\Response;
+use Ochorocho\UnityTracker\Connection\Provider;
+use Ochorocho\UnityTracker\Detail\GitLabDetailProvider;
+use Ochorocho\UnityTracker\Detail\ItemAction;
+use Ochorocho\UnityTracker\Detail\ItemDetail;
+use Ochorocho\UnityTracker\Detail\ItemReference;
+use Ochorocho\UnityTracker\Tests\Unit\Fixtures\Fixture;
+use PHPUnit\Framework\Attributes\Test;
+use TYPO3\TestingFramework\Core\Unit\UnitTestCase;
+
+final class GitLabDetailProviderTest extends UnitTestCase
+{
+    private GitLabDetailProvider $subject;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->subject = new GitLabDetailProvider();
+    }
+
+    #[Test]
+    public function detailIsOneGraphqlQueryPlusTheTokenScopes(): void
+    {
+        $requests = $this->subject->detailRequests($this->reference('merge_request'), Fixture::connection(Provider::GitLab, 'git.example.com'));
+
+        self::assertSame('https://git.example.com/api/graphql', (string)$requests['detail']->getUri());
+        self::assertSame('Bearer secret-token', $requests['detail']->getHeaderLine('Authorization'));
+        $body = json_decode((string)$requests['detail']->getBody(), true);
+        self::assertSame(['fullPath' => 'acme/app', 'iid' => '12', 'before' => null], $body['variables']);
+        self::assertStringContainsString('mergeRequest(iid: $iid)', $body['query']);
+        self::assertSame('https://git.example.com/api/v4/personal_access_tokens/self', (string)$requests['scopes']->getUri());
+    }
+
+    #[Test]
+    public function mergeRequestIsParsedWithItsPermissions(): void
+    {
+        $detail = $this->parse('merge_request', 'GitLab/graphql_merge_request.json');
+
+        self::assertSame('Fix login redirect', $detail->title);
+        self::assertSame(ItemDetail::STATE_OPEN, $detail->state);
+        self::assertSame([['id' => '7', 'name' => 'joe']], $detail->assignees);
+        self::assertSame(['id' => '42', 'name' => 'me'], $detail->viewer);
+        self::assertSame(['501', '504', '505', '503'], array_column($detail->comments(), 'id'), 'system notes are no comments');
+        self::assertSame([false, false, true, true], array_column($detail->comments(), 'canEdit'));
+        self::assertSame('Thanks!', $detail->comment('503')['body'] ?? null);
+        self::assertSame('eyJpZCI6IjUwMCJ9', $detail->olderCursor);
+        self::assertSame([['name' => 'feature', 'color' => '#428bca'], ['name' => 'evil', 'color' => '']], $detail->addableLabels());
+        self::assertSame([
+            ItemAction::COMMENT, ItemAction::EDIT, ItemAction::CLOSE, ItemAction::ASSIGN_ME, ItemAction::ADD_LABEL,
+            ItemAction::REMOVE_LABEL, ItemAction::APPROVE, ItemAction::MERGE, ItemAction::MARK_DONE, ItemAction::EDIT_COMMENT,
+            ItemAction::DELETE_COMMENT, ItemAction::REPLY, ItemAction::RESOLVE, ItemAction::UNRESOLVE,
+        ], $detail->actions);
+    }
+
+    #[Test]
+    public function discussionsBecomeEventsAndThreads(): void
+    {
+        $timeline = $this->parse('merge_request', 'GitLab/graphql_merge_request.json')->timeline;
+
+        self::assertSame(['thread', 'event', 'thread', 'thread'], array_column($timeline, 'type'));
+        self::assertSame(['jane', '<p>added 1 commit</p>'], [$timeline[1]['author'], $timeline[1]['html']]);
+        $thread = $timeline[2];
+        self::assertSame(['ccc333', 'ccc333', 'src/Login.php', 12], [$thread['id'], $thread['replyTo'], $thread['path'], $thread['line']]);
+        self::assertTrue($thread['resolvable'] && $thread['canResolve'] && $thread['canReply']);
+        self::assertFalse($timeline[0]['canResolve'], 'single comments cannot be resolved');
+        self::assertSame(['joe', 'me'], array_column($thread['comments'], 'author'));
+    }
+
+    #[Test]
+    public function closedIssueOffersWhatThePermissionsAllow(): void
+    {
+        $detail = $this->parse('issue', 'GitLab/graphql_issue_closed.json', todo: '');
+
+        self::assertSame([ItemAction::COMMENT, ItemAction::REOPEN], $detail->actions);
+    }
+
+    #[Test]
+    public function tokenWithoutApiScopeIsReadOnly(): void
+    {
+        $detail = $this->parse('merge_request', 'GitLab/graphql_merge_request.json', scopes: '{"scopes": ["read_api"]}');
+
+        self::assertSame([], $detail->actions);
+        self::assertSame('api', $detail->missingScope);
+        self::assertNotContains(true, array_column($detail->comments(), 'canEdit'));
+        self::assertNotContains(true, array_column($detail->comments(), 'canDelete'));
+        self::assertNotContains(true, array_column($detail->timeline, 'canReply'));
+    }
+
+    #[Test]
+    public function unknownScopesDoNotHideActions(): void
+    {
+        $detail = $this->parse('merge_request', 'GitLab/graphql_merge_request.json', scopes: null);
+
+        self::assertNotSame([], $detail->actions);
+    }
+
+    #[Test]
+    public function graphqlErrorWithoutDataFails(): void
+    {
+        $this->expectException(\UnexpectedValueException::class);
+        $this->subject->parseDetail($this->reference('issue'), ['detail' => new Response(200, [], '{"errors": [{"message": "Field missing"}]}'), 'scopes' => null]);
+    }
+
+    #[Test]
+    public function actionsUseTheRestApi(): void
+    {
+        $detail = $this->parse('merge_request', 'GitLab/graphql_merge_request.json');
+        $connection = Fixture::connection(Provider::GitLab);
+        $request = fn(string $action, array $parameters = []) => $this->subject->actionRequest($detail, $action, $parameters, $connection);
+
+        $assign = $request(ItemAction::ASSIGN_ME);
+        self::assertSame('PUT https://gitlab.com/api/v4/projects/acme%2Fapp/merge_requests/12', $assign->getMethod() . ' ' . $assign->getUri());
+        self::assertSame('{"assignee_ids":[7,42]}', (string)$assign->getBody());
+        self::assertSame('secret-token', $assign->getHeaderLine('PRIVATE-TOKEN'));
+        self::assertSame('{"add_labels":"feature"}', (string)$request(ItemAction::ADD_LABEL, ['label' => 'feature'])->getBody());
+        self::assertSame('https://gitlab.com/api/v4/projects/acme%2Fapp/merge_requests/12/approve', (string)$request(ItemAction::APPROVE)->getUri());
+        self::assertSame('https://gitlab.com/api/v4/todos/55/mark_as_done', (string)$request(ItemAction::MARK_DONE)->getUri());
+        self::assertSame('{"body":"Thanks"}', (string)$request(ItemAction::COMMENT, ['body' => 'Thanks'])->getBody());
+        $editComment = $request(ItemAction::EDIT_COMMENT, ['comment' => '503', 'body' => 'Thanks a lot!']);
+        self::assertSame('PUT https://gitlab.com/api/v4/projects/acme%2Fapp/merge_requests/12/notes/503', $editComment->getMethod() . ' ' . $editComment->getUri());
+        self::assertSame('{"body":"Thanks a lot!"}', (string)$editComment->getBody());
+        $delete = $request(ItemAction::DELETE_COMMENT, ['comment' => '503']);
+        self::assertSame('DELETE https://gitlab.com/api/v4/projects/acme%2Fapp/merge_requests/12/notes/503', $delete->getMethod() . ' ' . $delete->getUri());
+        $reply = $request(ItemAction::REPLY, ['thread' => 'ccc333', 'replyTo' => 'ccc333', 'body' => 'Done']);
+        self::assertSame('POST https://gitlab.com/api/v4/projects/acme%2Fapp/merge_requests/12/discussions/ccc333/notes', $reply->getMethod() . ' ' . $reply->getUri());
+        $resolve = $request(ItemAction::RESOLVE, ['thread' => 'ccc333', 'replyTo' => 'ccc333']);
+        self::assertSame('https://gitlab.com/api/graphql', (string)$resolve->getUri());
+        self::assertSame(['id' => 'gid://gitlab/Discussion/ccc333', 'resolve' => true], json_decode((string)$resolve->getBody(), true)['variables']);
+        self::assertFalse(json_decode((string)$request(ItemAction::UNRESOLVE, ['thread' => 'ccc333', 'replyTo' => 'ccc333'])->getBody(), true)['variables']['resolve']);
+    }
+
+    #[Test]
+    public function previewIsRenderedByGitLabInTheProject(): void
+    {
+        $request = $this->subject->previewRequest($this->reference('issue'), Fixture::connection(Provider::GitLab), 'Fixes #3');
+
+        self::assertSame('POST https://gitlab.com/api/v4/markdown', $request->getMethod() . ' ' . $request->getUri());
+        self::assertSame(['text' => 'Fixes #3', 'gfm' => true, 'project' => 'acme/app'], json_decode((string)$request->getBody(), true));
+        self::assertSame('<p>Fixes</p>', $this->subject->parsePreview(new Response(200, [], '{"html": "<p>Fixes</p>"}')));
+    }
+
+    #[Test]
+    public function suggestionsSearchUsersIssuesAndMergeRequests(): void
+    {
+        $connection = Fixture::connection(Provider::GitLab);
+        $reference = $this->reference('issue');
+
+        $users = $this->subject->suggestionRequest($reference, $connection, 'user', 'ja');
+        self::assertSame(['fullPath' => 'acme/app', 'search' => 'ja'], json_decode((string)$users?->getBody(), true)['variables']);
+        self::assertSame(
+            [['value' => 'jane', 'label' => 'jane Jane Doe']],
+            $this->subject->parseSuggestions('user', new Response(200, [], '{"data": {"project": {"autocompleteUsers": [{"username": "jane", "name": "Jane Doe"}]}}}'))
+        );
+        self::assertSame(
+            'https://gitlab.com/api/v4/projects/acme%2Fapp/issues?per_page=10&order_by=updated_at&search=login%20bug',
+            (string)$this->subject->suggestionRequest($reference, $connection, 'issue', 'login bug')?->getUri()
+        );
+        self::assertSame(
+            'https://gitlab.com/api/v4/projects/acme/app/merge_requests?per_page=10&order_by=updated_at&iids[]=12',
+            rawurldecode((string)$this->subject->suggestionRequest($reference, $connection, 'mergeRequest', '12')?->getUri())
+        );
+        self::assertSame(
+            [['value' => '12', 'label' => '12 Fix login']],
+            $this->subject->parseSuggestions('mergeRequest', new Response(200, [], '[{"iid": 12, "title": "Fix login"}]'))
+        );
+        self::assertNull($this->subject->suggestionRequest($reference, $connection, 'emoji', 'tada'));
+    }
+
+    private function reference(string $type, string $todo = '55'): ItemReference
+    {
+        return ItemReference::fromArray(['connection' => 1, 'type' => $type, 'project' => 'acme/app', 'number' => $type === 'issue' ? 9 : 12, 'todo' => $todo]);
+    }
+
+    private function parse(string $type, string $fixture, ?string $scopes = '{"scopes": ["api"]}', string $todo = '55'): ItemDetail
+    {
+        return $this->subject->parseDetail($this->reference($type, $todo), [
+            'detail' => new Response(200, [], Fixture::json($fixture)),
+            'scopes' => $scopes !== null ? new Response(200, [], $scopes) : null,
+        ]);
+    }
+}

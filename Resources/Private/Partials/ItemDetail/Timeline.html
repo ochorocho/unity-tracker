@@ -1,0 +1,105 @@
+<html
+    xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+    data-namespace-typo3-fluid="true"
+>
+<f:comment>
+    One page of the timeline (see Detail\Timeline): events as one line, threads as cards.
+    Forms carry the page's cursor (partial Reference), the action is checked against that page.
+</f:comment>
+<f:for each="{timeline}" as="entry">
+    <f:if condition="{entry.type} == 'event'">
+        <f:then>
+            <div class="small mb-2 px-3 d-flex flex-wrap align-items-baseline gap-1" style="opacity: .8" data-event>
+                <strong>{entry.author}</strong>
+                <f:if condition="{entry.html}">
+                    <f:then><div class="d-inline-block" style="max-width: 100%" data-event-html><f:sanitize.html build="Ochorocho\UnityTracker\Detail\ProviderHtmlSanitizerBuilder">{entry.html}</f:sanitize.html></div></f:then>
+                    <f:else><span><f:translate key="item.event.{entry.event}" extensionName="UnityTracker" arguments="{0: entry.subject}" /></span></f:else>
+                </f:if>
+                <f:if condition="{entry.createdAt}"><span>· <f:format.date format="d.m.Y H:i">{entry.createdAt}</f:format.date></span></f:if>
+            </div>
+        </f:then>
+        <f:else>
+            <article class="card mb-2" data-thread="{entry.id}" {f:if(condition: entry.resolved, then: 'data-resolved')}>
+                <f:if condition="{entry.path} || {entry.resolvable} || {entry.review}">
+                    <div class="card-header d-flex flex-wrap align-items-center gap-2 small">
+                        <f:if condition="{entry.review}">
+                            <span class="badge badge-{f:if(condition: '{entry.review} == approved', then: 'success', else: '{f:if(condition: \'{entry.review} == changes_requested\', then: \'danger\', else: \'default\')}')}">
+                                <f:translate key="item.review.{entry.review}" extensionName="UnityTracker" default="{entry.review}" />
+                            </span>
+                        </f:if>
+                        <f:if condition="{entry.path}">
+                            <code>{entry.path}<f:if condition="{entry.line}">:{entry.line}</f:if></code>
+                            <f:if condition="{entry.url}"><a href="{entry.url}" target="_blank" rel="noopener noreferrer"><f:translate key="item.viewDiff" extensionName="UnityTracker" /></a></f:if>
+                        </f:if>
+                        <f:if condition="{entry.resolved}"><span class="badge badge-success"><f:translate key="item.resolved" extensionName="UnityTracker" /></span></f:if>
+                        <f:if condition="{entry.canResolve}">
+                            <form method="post" action="{actionUri}" class="ms-auto" data-item-form>
+                                <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+                                <input type="hidden" name="thread" value="{entry.id}" />
+                                <f:if condition="{entry.resolved}">
+                                    <f:then><button class="btn btn-default btn-sm" name="action" value="unresolve"><f:translate key="item.action.unresolve" extensionName="UnityTracker" /></button></f:then>
+                                    <f:else><button class="btn btn-default btn-sm" name="action" value="resolve"><f:translate key="item.action.resolve" extensionName="UnityTracker" /></button></f:else>
+                                </f:if>
+                            </form>
+                        </f:if>
+                    </div>
+                </f:if>
+                <div class="card-body">
+                    <f:for each="{entry.comments}" as="comment" iteration="iteration">
+                        <div class="{f:if(condition: iteration.isFirst, else: 'border-top pt-3 mt-3')}" data-comment="{comment.id}">
+                            <div class="d-flex align-items-start gap-2 mb-2">
+                                <p class="small mb-0 flex-grow-1"><strong>{comment.author}</strong><f:if condition="{comment.createdAt}">, <f:format.date format="d.m.Y H:i">{comment.createdAt}</f:format.date></f:if></p>
+                                <f:if condition="{comment.canEdit}">
+                                    <button type="button" class="btn btn-default btn-sm" data-inline-start="comment-{comment.id}"><f:translate key="item.action.editComment" extensionName="UnityTracker" /></button>
+                                </f:if>
+                                <f:if condition="{comment.canDelete}">
+                                    <form method="post" action="{actionUri}" data-item-form>
+                                        <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+                                        <input type="hidden" name="comment" value="{comment.id}" />
+                                        <button class="btn btn-default btn-sm t3js-modal-trigger" type="submit" name="action" value="deleteComment"
+                                            data-title="{f:translate(key: 'item.action.deleteComment', extensionName: 'UnityTracker')}"
+                                            data-content="{f:translate(key: 'item.confirm.deleteComment', extensionName: 'UnityTracker')}"
+                                            data-bs-content="{f:translate(key: 'item.confirm.deleteComment', extensionName: 'UnityTracker')}"
+                                            data-severity="warning"
+                                            data-button-ok-text="{f:translate(key: 'item.action.deleteComment', extensionName: 'UnityTracker')}">
+                                            <f:translate key="item.action.deleteComment" extensionName="UnityTracker" />
+                                        </button>
+                                    </form>
+                                </f:if>
+                            </div>
+                            <div class="text-break" data-inline-view="comment-{comment.id}"><f:sanitize.html build="Ochorocho\UnityTracker\Detail\ProviderHtmlSanitizerBuilder">{comment.html}</f:sanitize.html></div>
+                            <f:if condition="{comment.canEdit}">
+                                <form method="post" action="{actionUri}" data-item-form data-inline-field="comment-{comment.id}" hidden>
+                                    <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+                                    <input type="hidden" name="comment" value="{comment.id}" />
+                                    <unity-tracker-markdown-editor class="d-block mb-2" name="body" rows="6" value="{comment.body}"
+                                        label="{f:translate(key: 'item.field.comment', extensionName: 'UnityTracker')}"></unity-tracker-markdown-editor>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-primary" name="action" value="editComment"><f:translate key="item.action.save" extensionName="UnityTracker" /></button>
+                                        <button type="button" class="btn btn-default" data-inline-cancel="comment-{comment.id}"><f:translate key="item.action.cancel" extensionName="UnityTracker" /></button>
+                                    </div>
+                                </form>
+                            </f:if>
+                        </div>
+                    </f:for>
+                    <f:if condition="{entry.canReply}">
+                        <div class="border-top pt-3 mt-3">
+                            <button type="button" class="btn btn-default btn-sm" data-inline-start="reply-{entry.id}"><f:translate key="item.action.reply" extensionName="UnityTracker" /></button>
+                            <form method="post" action="{actionUri}" data-item-form data-inline-field="reply-{entry.id}" hidden>
+                                <f:render partial="ItemDetail/Reference" arguments="{detail: detail}" />
+                                <input type="hidden" name="thread" value="{entry.id}" />
+                                <unity-tracker-markdown-editor class="d-block mb-2" name="body" rows="4"
+                                    label="{f:translate(key: 'item.field.reply', extensionName: 'UnityTracker')}"></unity-tracker-markdown-editor>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-primary" name="action" value="reply"><f:translate key="item.action.reply" extensionName="UnityTracker" /></button>
+                                    <button type="button" class="btn btn-default" data-inline-cancel="reply-{entry.id}"><f:translate key="item.action.cancel" extensionName="UnityTracker" /></button>
+                                </div>
+                            </form>
+                        </div>
+                    </f:if>
+                </div>
+            </article>
+        </f:else>
+    </f:if>
+</f:for>
+</html>

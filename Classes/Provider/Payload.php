@@ -50,6 +50,15 @@ final class Payload
     }
 
     /**
+     * @param array<mixed> $data
+     */
+    public static function int(array $data, string ...$path): int
+    {
+        $value = self::value($data, $path);
+        return is_int($value) || (is_string($value) && ctype_digit($value)) ? (int)$value : 0;
+    }
+
+    /**
      * Links end up in href attributes: only http(s) URLs are accepted.
      *
      * @param array<mixed> $data

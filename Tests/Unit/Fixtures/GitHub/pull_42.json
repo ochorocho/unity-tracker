@@ -1,0 +1,8 @@
+{
+  "number": 42,
+  "title": "Fix login redirect",
+  "html_url": "https://github.com/acme/app/pull/42",
+  "user": { "login": "octocat" },
+  "labels": [{ "name": "bug" }, { "name": "needs review" }, { "name": "" }],
+  "draft": true
+}
