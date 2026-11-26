@@ -157,6 +157,25 @@
     </f:if>
 </section>
 
+<f:if condition="{linked}">
+    <section class="mb-3" data-sidebar="linked">
+        <h2 class="h6 mb-1"><f:translate key="item.linked" extensionName="UnityTracker" /></h2>
+        <ul class="list-unstyled mb-1">
+            <f:for each="{linked}" as="link">
+                <li class="mb-1" data-linked="{link.reference}">
+                    <span class="small d-block"><f:translate key="item.relation.{link.relation}" extensionName="UnityTracker" /></span>
+                    <span class="badge badge-{f:if(condition: '{link.state} == open', then: 'success', else: '{f:if(condition: \'{link.state} == merged\', then: \'info\', else: \'default\')}')}"><f:translate key="item.state.{link.state}" extensionName="UnityTracker" /></span>
+                    <f:if condition="{link.sheetUrl}">
+                        <f:then><a href="{link.sheetUrl}" class="text-break" title="{link.reference}">{link.title}</a></f:then>
+                        <f:else><a href="{link.url}" class="text-break" target="_blank" rel="noopener noreferrer" title="{link.reference}">{link.title}</a></f:else>
+                    </f:if>
+                    <span class="small d-block text-break">{link.reference}</span>
+                </li>
+            </f:for>
+        </ul>
+    </section>
+</f:if>
+
 <f:if condition="{detail.participants}">
     <section class="mb-3" data-sidebar="participants">
         <h2 class="h6 mb-1"><f:translate key="item.participants" extensionName="UnityTracker" /></h2>

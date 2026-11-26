@@ -48,7 +48,7 @@
                     <f:for each="{entry.comments}" as="comment" iteration="iteration">
                         <div class="{f:if(condition: iteration.isFirst, else: 'border-top pt-3 mt-3')}" data-comment="{comment.id}">
                             <div class="d-flex align-items-start gap-2 mb-2">
-                                <p class="small mb-0 flex-grow-1"><strong>{comment.author}</strong><f:if condition="{comment.createdAt}">, <f:format.date format="d.m.Y H:i">{comment.createdAt}</f:format.date></f:if></p>
+                                <p class="small mb-0 flex-grow-1"><strong>{comment.author}</strong><f:if condition="{comment.createdAt}">, <f:format.date format="d.m.Y H:i">{comment.createdAt}</f:format.date></f:if><f:if condition="{comment.internal}"> <span class="badge badge-warning" data-internal title="{f:translate(key: 'item.internal.title', extensionName: 'UnityTracker')}"><f:translate key="item.internal" extensionName="UnityTracker" /></span></f:if></p>
                                 <f:if condition="{comment.canEdit}">
                                     <button type="button" class="btn btn-default btn-sm" data-inline-start="comment-{comment.id}"><f:translate key="item.action.editComment" extensionName="UnityTracker" /></button>
                                 </f:if>

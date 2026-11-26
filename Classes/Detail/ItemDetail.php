@@ -40,6 +40,8 @@ final readonly class ItemDetail
      * @param string $dueDate "Y-m-d" or ""
      * @param list<string> $participants user names
      * @param MergeState|null $merge merge/pull requests only
+     * @param list<array{relation: string, type: string, project: string, number: int, title: string, state: string, url: string}> $linked
+     *        related issues and merge/pull requests; relation: label key suffix item.relation.*, state: open|closed|merged
      */
     public function __construct(
         public ItemReference $reference,
@@ -76,6 +78,7 @@ final readonly class ItemDetail
         public array $participants = [],
         public bool $subscribed = false,
         public ?MergeState $merge = null,
+        public array $linked = [],
     ) {}
 
     /**

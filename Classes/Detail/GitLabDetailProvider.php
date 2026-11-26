@@ -8,11 +8,13 @@ declare(strict_types=1);
 
 namespace Ochorocho\UnityTracker\Detail;
 
+use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Request;
 use Ochorocho\UnityTracker\Connection\Connection;
 use Ochorocho\UnityTracker\Provider\Payload;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\StreamInterface;
 
 /**
  * Details through one GraphQL query (rendered HTML and the user's permissions included),
@@ -35,7 +37,7 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
           nodes {
             id resolvable resolved userPermissions { resolveNote }
             notes { nodes {
-              id body bodyHtml createdAt system url author { username }
+              id body bodyHtml createdAt system internal url author { username }
               position { filePath newLine oldLine }
               awardEmoji { nodes { name emoji user { username } } }
               userPermissions { adminNote awardEmoji }
@@ -140,9 +142,15 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
             // Which scopes the token has (GitLab 15.5+); without "api" the sheet is read-only.
             'scopes' => $this->rest($connection, 'GET', '/personal_access_tokens/self'),
         ];
-        if (!$reference->isChange()) {
+        $path = '/projects/' . rawurlencode($reference->project) . ($reference->isChange() ? '/merge_requests/' : '/issues/') . $reference->number;
+        // Linked items through REST: stable on every GitLab version (GraphQL has them as experimental work item fields).
+        if ($reference->isChange()) {
+            $requests['closesIssues'] = $this->rest($connection, 'GET', $path . '/closes_issues?per_page=20');
+        } else {
             // The GraphQL type Issue has no awardEmoji field.
-            $requests['awards'] = $this->rest($connection, 'GET', '/projects/' . rawurlencode($reference->project) . '/issues/' . $reference->number . '/award_emoji?per_page=100');
+            $requests['awards'] = $this->rest($connection, 'GET', $path . '/award_emoji?per_page=100');
+            $requests['links'] = $this->rest($connection, 'GET', $path . '/links');
+            $requests['relatedMergeRequests'] = $this->rest($connection, 'GET', $path . '/related_merge_requests?per_page=20');
         }
         return $requests;
     }
@@ -219,6 +227,7 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
             ))),
             subscribed: Payload::bool($target, 'subscribed'),
             merge: $reference->isChange() ? $this->mergeState($target, Payload::array($payload, 'data', 'project'), $permissions) : null,
+            linked: $this->linked($responses),
         );
         $detail = $this->withActions($detail, $permissions, $target);
 
@@ -238,6 +247,7 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
 
         return match ($action) {
             ItemAction::COMMENT => $this->rest($connection, 'POST', $path . '/notes', ['body' => $parameters['body']]),
+            ItemAction::INTERNAL_NOTE => $this->rest($connection, 'POST', $path . '/notes', ['body' => $parameters['body'], 'internal' => true]),
             ItemAction::EDIT => $this->rest($connection, 'PUT', $path, ['title' => $parameters['title'], 'description' => $parameters['description']]),
             ItemAction::CLOSE => $this->rest($connection, 'PUT', $path, ['state_event' => 'close']),
             ItemAction::REOPEN => $this->rest($connection, 'PUT', $path, ['state_event' => 'reopen']),
@@ -290,6 +300,19 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
         return Payload::string(Responses::json($response) ?? [], 'html');
     }
 
+    /**
+     * POST /projects/:id/uploads answers {"markdown": "![name](/uploads/…/name)"}, relative to the project.
+     */
+    public function uploadRequest(ItemReference $reference, Connection $connection, string $filename, StreamInterface $file): RequestInterface
+    {
+        $body = new MultipartStream([['name' => 'file', 'contents' => $file, 'filename' => $filename]]);
+        return new Request('POST', $connection->apiBaseUrl() . '/projects/' . rawurlencode($reference->project) . '/uploads', [
+            'Accept' => 'application/json',
+            'PRIVATE-TOKEN' => $connection->token,
+            'Content-Type' => 'multipart/form-data; boundary=' . $body->getBoundary(),
+        ], $body);
+    }
+
     public function suggestionRequest(ItemReference $reference, Connection $connection, string $kind, string $query): ?RequestInterface
     {
         if ($kind === 'user') {
@@ -338,6 +361,8 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
             }
         };
         $allow(Payload::bool($permissions, 'createNote'), ItemAction::COMMENT);
+        // Internal notes need the Reporter role, like labels and assignees.
+        $allow(Payload::bool($permissions, 'createNote') && $admin, ItemAction::INTERNAL_NOTE);
         $allow($update, ItemAction::EDIT);
         $allow($open && $update, ItemAction::CLOSE);
         $allow($detail->state === ItemDetail::STATE_CLOSED && ($isChange ? $update : Payload::bool($permissions, 'reopenIssue')), ItemAction::REOPEN);
@@ -432,6 +457,7 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
                 $this->reactions(Payload::list($note, 'awardEmoji', 'nodes'), $viewer),
                 $this->awardable(Payload::string($note, 'id')),
                 Payload::bool($note, 'userPermissions', 'awardEmoji'),
+                Payload::bool($note, 'internal'),
             ), $notes), [
                 'resolvable' => $resolvable,
                 'resolved' => Payload::bool($discussion, 'resolved'),
@@ -444,6 +470,41 @@ final readonly class GitLabDetailProvider implements DetailProviderInterface
             ]);
         }
         return $timeline;
+    }
+
+    /**
+     * Linked items from the REST answers of detailRequests(); a failed request just shows none.
+     *
+     * @param array<string, ResponseInterface|null> $responses
+     * @return list<array{relation: string, type: string, project: string, number: int, title: string, state: string, url: string}>
+     */
+    private function linked(array $responses): array
+    {
+        $linked = [];
+        $sources = ['closesIssues' => 'issue', 'links' => 'issue', 'relatedMergeRequests' => 'merge_request'];
+        foreach ($sources as $key => $type) {
+            foreach (Payload::list(Responses::json($responses[$key] ?? null) ?? []) as $item) {
+                $relation = match ($key) {
+                    'closesIssues' => 'closes',
+                    'relatedMergeRequests' => 'mergeRequest',
+                    default => ['blocks' => 'blocks', 'is_blocked_by' => 'isBlockedBy'][Payload::string($item, 'link_type')] ?? 'relatesTo',
+                };
+                // "group/project#12", "group/project!3"
+                if (preg_match('/^(.+)[#!](\d+)$/', Payload::string($item, 'references', 'full'), $match) !== 1) {
+                    continue;
+                }
+                $linked[] = [
+                    'relation' => $relation,
+                    'type' => $type,
+                    'project' => $match[1],
+                    'number' => (int)$match[2],
+                    'title' => Payload::string($item, 'title'),
+                    'state' => ['opened' => 'open', 'locked' => 'open', 'merged' => 'merged'][Payload::string($item, 'state')] ?? 'closed',
+                    'url' => Payload::url($item, 'web_url'),
+                ];
+            }
+        }
+        return $linked;
     }
 
     /**

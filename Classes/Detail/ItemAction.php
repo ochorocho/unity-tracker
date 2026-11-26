@@ -15,6 +15,8 @@ namespace Ochorocho\UnityTracker\Detail;
 final class ItemAction
 {
     public const COMMENT = 'comment';
+    /** GitLab: a comment only members (Reporter and up) see */
+    public const INTERNAL_NOTE = 'internalNote';
     public const EDIT = 'edit';
     public const CLOSE = 'close';
     public const REOPEN = 'reopen';
@@ -63,7 +65,7 @@ final class ItemAction
     public const CLOSE_NOT_PLANNED = 'closeNotPlanned';
 
     public const ALL = [
-        self::COMMENT, self::EDIT, self::CLOSE, self::REOPEN, self::ASSIGN_ME, self::UNASSIGN_ME, self::ADD_LABEL,
+        self::COMMENT, self::INTERNAL_NOTE, self::EDIT, self::CLOSE, self::REOPEN, self::ASSIGN_ME, self::UNASSIGN_ME, self::ADD_LABEL,
         self::REMOVE_LABEL, self::APPROVE, self::UNAPPROVE, self::REQUEST_CHANGES, self::MERGE, self::MARK_DONE,
         self::EDIT_COMMENT, self::DELETE_COMMENT, self::REPLY, self::RESOLVE, self::UNRESOLVE, self::REACT, self::TOGGLE_TASK,
         self::ADD_ASSIGNEE, self::REMOVE_ASSIGNEE, self::ADD_REVIEWER, self::REMOVE_REVIEWER, self::SET_MILESTONE, self::SET_DUE_DATE,

@@ -188,7 +188,8 @@
                     "position": null,
                     "userPermissions": {
                       "adminNote": true
-                    }
+                    },
+                    "internal": true
                   }
                 ]
               }

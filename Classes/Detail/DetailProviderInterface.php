@@ -11,6 +11,7 @@ namespace Ochorocho\UnityTracker\Detail;
 use Ochorocho\UnityTracker\Connection\Connection;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\StreamInterface;
 
 /**
  * Builds the detail and action requests of one provider and parses the answers. No I/O happens here.
@@ -43,6 +44,12 @@ interface DetailProviderInterface
      * @return string HTML, not sanitised yet
      */
     public function parsePreview(ResponseInterface $response): string;
+
+    /**
+     * Uploads a file for a description or comment, null if the provider has no upload API (GitHub).
+     * The answer carries the Markdown to insert (see ItemDetailService::upload()).
+     */
+    public function uploadRequest(ItemReference $reference, Connection $connection, string $filename, StreamInterface $file): ?RequestInterface;
 
     /**
      * Autocompletion in the Markdown editor, null if the provider has no such references.

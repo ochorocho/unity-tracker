@@ -41,6 +41,8 @@ The sheet offers only what the API says the token's user may do, and checks it a
 | Rebase / update branch, mark as draft / ready | ✓ | ✓ |
 | Delete the branch of a merged pull request | – (option of the merge) | ✓ |
 | Close as not planned | – | issues |
+| Internal note (members only) | Reporter and up | – |
+| Attach files in the editor (button, paste, drop; 10 MB) | ✓ | – (no upload API) |
 | Mark to-do done / notification read | to-dos | notifications |
 | Edit / delete own comments | ✓ | ✓ (submitted reviews: edit only) |
 | Reply to a thread | discussions | review threads |
@@ -65,6 +67,8 @@ Reactions are GraphQL mutations as well (`awardEmojiToggle`, `addReaction`/`remo
 beside the description and activity on wide sheets. Merge and pull requests get a merge widget: pipeline/checks,
 approvals or review decision, what blocks the merge (GitLab's mergeability checks, GitHub's merge state) and the
 merge options. Merging sends the commit the sheet showed, so a branch that moved on is not merged unseen.
+Linked items (closes / closed by, related, blocks / is blocked by) open in the sheet. On GitLab the editor suggests
+quick actions (`/assign`, `/label`, …) at the start of a line; GitLab runs them when the comment is saved.
 
 Images in descriptions and comments are loaded by TYPO3 and served from the backend (route
 `itemImage`): the backend's Content-Security-Policy blocks other origins, and uploads of non-public

@@ -107,6 +107,7 @@
                 label="{f:translate(key: 'item.field.comment', extensionName: 'UnityTracker')}"></unity-tracker-markdown-editor>
             <div class="d-flex flex-wrap gap-2">
                 <button class="btn btn-primary" name="action" value="comment"><f:translate key="item.action.comment" extensionName="UnityTracker" /></button>
+                <f:if condition="{can.internalNote}"><button class="btn btn-default" name="action" value="internalNote"><f:translate key="item.action.internalNote" extensionName="UnityTracker" /></button></f:if>
                 <f:if condition="{can.requestChanges}"><button class="btn btn-default" name="action" value="requestChanges"><f:translate key="item.action.requestChanges" extensionName="UnityTracker" /></button></f:if>
             </div>
         </form>

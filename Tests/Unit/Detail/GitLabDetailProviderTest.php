@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace Ochorocho\UnityTracker\Tests\Unit\Detail;
 
 use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Psr7\Utils;
 use Ochorocho\UnityTracker\Connection\Provider;
 use Ochorocho\UnityTracker\Detail\GitLabDetailProvider;
 use Ochorocho\UnityTracker\Detail\ItemAction;
@@ -56,7 +57,7 @@ final class GitLabDetailProviderTest extends UnitTestCase
         self::assertSame('eyJpZCI6IjUwMCJ9', $detail->olderCursor);
         self::assertSame([['name' => 'feature', 'color' => '#428bca'], ['name' => 'evil', 'color' => '']], $detail->addableLabels());
         self::assertSame([
-            ItemAction::COMMENT, ItemAction::EDIT, ItemAction::CLOSE, ItemAction::ASSIGN_ME, ItemAction::ADD_LABEL,
+            ItemAction::COMMENT, ItemAction::INTERNAL_NOTE, ItemAction::EDIT, ItemAction::CLOSE, ItemAction::ASSIGN_ME, ItemAction::ADD_LABEL,
             ItemAction::REMOVE_LABEL, ItemAction::ADD_ASSIGNEE, ItemAction::REMOVE_ASSIGNEE, ItemAction::SET_MILESTONE, ItemAction::LOCK,
             ItemAction::ADD_REVIEWER, ItemAction::REMOVE_REVIEWER, ItemAction::UNSUBSCRIBE, ItemAction::APPROVE, ItemAction::MERGE, ItemAction::UPDATE_BRANCH, ItemAction::MARK_DRAFT, ItemAction::MARK_DONE, ItemAction::EDIT_COMMENT,
             ItemAction::DELETE_COMMENT, ItemAction::REPLY, ItemAction::RESOLVE, ItemAction::UNRESOLVE, ItemAction::REACT, ItemAction::TOGGLE_TASK,
@@ -155,6 +156,53 @@ final class GitLabDetailProviderTest extends UnitTestCase
         $draft = json_decode((string)$this->subject->actionRequest($detail, ItemAction::MARK_DRAFT, [], $connection)->getBody(), true);
         self::assertStringContainsString('mergeRequestSetDraft(', $draft['query']);
         self::assertTrue($draft['variables']['value']);
+    }
+
+    #[Test]
+    public function linkedItemsComeFromTheRestApi(): void
+    {
+        $issue = $this->reference('issue', '');
+        $requests = $this->subject->detailRequests($issue, Fixture::connection(Provider::GitLab));
+        self::assertSame('https://gitlab.com/api/v4/projects/acme%2Fapp/issues/9/links', (string)$requests['links']->getUri());
+        self::assertSame('https://gitlab.com/api/v4/projects/acme%2Fapp/issues/9/related_merge_requests?per_page=20', (string)$requests['relatedMergeRequests']->getUri());
+        $mergeRequest = $this->subject->detailRequests($this->reference('merge_request'), Fixture::connection(Provider::GitLab));
+        self::assertSame('https://gitlab.com/api/v4/projects/acme%2Fapp/merge_requests/12/closes_issues?per_page=20', (string)$mergeRequest['closesIssues']->getUri());
+
+        $detail = $this->subject->parseDetail($issue, [
+            'detail' => new Response(200, [], Fixture::json('GitLab/graphql_issue_closed.json')),
+            'scopes' => null,
+            'links' => new Response(200, [], (string)json_encode([
+                ['iid' => 4, 'title' => 'Blocker', 'state' => 'opened', 'link_type' => 'is_blocked_by', 'web_url' => 'https://gitlab.com/acme/app/-/issues/4', 'references' => ['full' => 'acme/app#4']],
+                ['iid' => 5, 'title' => 'Broken', 'state' => 'closed', 'link_type' => 'relates_to', 'references' => ['full' => 'no reference']],
+            ])),
+            'relatedMergeRequests' => new Response(200, [], (string)json_encode([
+                ['iid' => 12, 'title' => 'Fix it', 'state' => 'merged', 'web_url' => 'https://gitlab.com/other/lib/-/merge_requests/12', 'references' => ['full' => 'other/lib!12']],
+            ])),
+        ]);
+        self::assertSame([
+            ['relation' => 'isBlockedBy', 'type' => 'issue', 'project' => 'acme/app', 'number' => 4, 'title' => 'Blocker', 'state' => 'open', 'url' => 'https://gitlab.com/acme/app/-/issues/4'],
+            ['relation' => 'mergeRequest', 'type' => 'merge_request', 'project' => 'other/lib', 'number' => 12, 'title' => 'Fix it', 'state' => 'merged', 'url' => 'https://gitlab.com/other/lib/-/merge_requests/12'],
+        ], $detail->linked);
+    }
+
+    #[Test]
+    public function internalNotesAreReadAndWritten(): void
+    {
+        $detail = $this->parse('merge_request', 'GitLab/graphql_merge_request.json');
+        $request = $this->subject->actionRequest($detail, ItemAction::INTERNAL_NOTE, ['body' => 'Team only'], Fixture::connection(Provider::GitLab));
+
+        self::assertSame('{"body":"Team only","internal":true}', (string)$request->getBody());
+        self::assertSame([false, false, false, true], array_column($detail->comments(), 'internal'));
+    }
+
+    #[Test]
+    public function uploadIsAMultipartRequestToTheProject(): void
+    {
+        $request = $this->subject->uploadRequest($this->reference('issue'), Fixture::connection(Provider::GitLab), 'shot.png', Utils::streamFor('png'));
+
+        self::assertSame('POST https://gitlab.com/api/v4/projects/acme%2Fapp/uploads', $request->getMethod() . ' ' . $request->getUri());
+        self::assertStringStartsWith('multipart/form-data; boundary=', $request->getHeaderLine('Content-Type'));
+        self::assertStringContainsString('name="file"; filename="shot.png"', (string)$request->getBody());
     }
 
     #[Test]

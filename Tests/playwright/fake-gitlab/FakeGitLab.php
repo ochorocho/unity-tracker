@@ -24,7 +24,8 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  * Discussions: jane's comment, tester's comment, a system note and jane's unresolved diff thread.
  * One older page (cursor OLDER) holds a system note. Award emoji: jane's 👍 on the merge request and 🎉 on her comment.
  * Sidebar: no assignees, reviewer jane, milestone "v1.0" of "v1.0"/"v1.1", unlocked, tester subscribed.
- * Merge: the pipeline is running (so only auto-merge is possible), not a draft.
+ * Merge: the pipeline is running (so only auto-merge is possible), not a draft. It closes issue acme/app#3.
+ * Uploads answer with the Markdown of the file.
  */
 final class FakeGitLab
 {
@@ -73,7 +74,12 @@ final class FakeGitLab
             $path === '/api/v4/markdown' => ['html' => $this->markdown((string)($body['text'] ?? ''))],
             $path === '/api/v4/projects/acme/app/issues' => [['iid' => 3, 'title' => 'Crash on start']],
             $path === '/api/graphql' => $this->graphql($state, $body),
-            $method === 'POST' && $path === self::MR . '/notes' => $this->addNote($state, null, (string)$body['body']),
+            $method === 'POST' && $path === self::MR . '/notes' => $this->addNote($state, null, (string)$body['body'], (bool)($body['internal'] ?? false)),
+            $method === 'GET' && $path === self::MR . '/closes_issues' => [[
+                'iid' => 3, 'title' => 'Crash on start', 'state' => 'opened',
+                'web_url' => 'https://' . self::HOST . '/acme/app/-/issues/3', 'references' => ['full' => 'acme/app#3'],
+            ]],
+            $method === 'POST' && $path === '/api/v4/projects/acme/app/uploads' => $this->upload((string)$request->getBody()),
             $method === 'POST' && preg_match('#^' . self::MR . '/discussions/([0-9a-f]+)/notes$#', $path, $matches) === 1
                 => $this->addNote($state, $matches[1], (string)$body['body']),
             $method === 'PUT' && preg_match('#^' . self::MR . '/notes/(\d+)$#', $path, $matches) === 1
@@ -125,6 +131,19 @@ final class FakeGitLab
     private function save(array $state): void
     {
         GeneralUtility::makeInstance(Registry::class)->set(self::NAMESPACE, 'state', $state);
+    }
+
+    /**
+     * Answers like GitLab's POST /projects/:id/uploads, with the file name of the multipart body.
+     *
+     * @return array{markdown: string}|null
+     */
+    private function upload(string $body): ?array
+    {
+        if (preg_match('/name="file"; filename="([^"]+)"/', $body, $match) !== 1) {
+            return null;
+        }
+        return ['markdown' => '![' . $match[1] . '](/uploads/0123456789abcdef0123456789abcdef/' . rawurlencode($match[1]) . ')'];
     }
 
     /**
@@ -226,6 +245,7 @@ final class FakeGitLab
                 'bodyHtml' => $this->markdown($note['body']),
                 'createdAt' => '2026-11-21T10:00:00Z',
                 'system' => $note['system'] ?? false,
+                'internal' => $note['internal'] ?? false,
                 'url' => 'https://' . self::HOST . '/acme/app/-/merge_requests/12#note_' . $note['id'],
                 'author' => ['username' => $note['author']],
                 'position' => isset($note['path']) ? ['filePath' => $note['path'], 'newLine' => 12, 'oldLine' => null] : null,
@@ -298,10 +318,10 @@ final class FakeGitLab
      * @param array<string, mixed> $state
      * @return array<string, mixed>|null
      */
-    private function addNote(array $state, ?string $discussion, string $body): ?array
+    private function addNote(array $state, ?string $discussion, string $body, bool $internal = false): ?array
     {
         $ids = array_column(array_merge(...array_column($state['discussions'], 'notes')), 'id');
-        $note = ['id' => max([104, ...$ids]) + 1, 'author' => 'tester', 'body' => $body];
+        $note = ['id' => max([104, ...$ids]) + 1, 'author' => 'tester', 'body' => $body, 'internal' => $internal];
         if ($discussion === null) {
             $state['discussions'][] = ['id' => dechex($note['id']), 'resolvable' => false, 'resolved' => false, 'notes' => [$note]];
         } else {

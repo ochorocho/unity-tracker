@@ -18,6 +18,7 @@ use Ochorocho\UnityTracker\Connection\Provider;
 use Ochorocho\UnityTracker\Provider\Payload;
 use Ochorocho\UnityTracker\Service\FetchError;
 use Ochorocho\UnityTracker\Service\FetchFailedException;
+use Psr\Http\Message\UploadedFileInterface;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -29,6 +30,7 @@ final readonly class ItemDetailService
     /** Autocompletion in the Markdown editor: "@" users, "#" issues (GitHub: and pull requests), "!" merge requests */
     public const SUGGESTION_KINDS = ['user', 'issue', 'mergeRequest'];
     public const MAX_PREVIEW = 65536;
+    public const MAX_UPLOAD = 10485760;
 
     private const OPTIONS = [
         RequestOptions::CONNECT_TIMEOUT => 5,
@@ -140,6 +142,36 @@ final readonly class ItemDetailService
     }
 
     /**
+     * Uploads a file of the Markdown editor to the provider.
+     *
+     * @return string Markdown that shows/links the file
+     * @throws FetchFailedException|InvalidActionException
+     */
+    public function upload(ItemReference $reference, Connection $connection, UploadedFileInterface $file): string
+    {
+        if ($file->getError() !== UPLOAD_ERR_OK || ($file->getSize() ?? 0) < 1 || $file->getSize() > self::MAX_UPLOAD) {
+            throw new InvalidActionException('upload', 1764240419);
+        }
+        // A plain file name: no paths, no control characters, no Markdown syntax that breaks the link.
+        $name = (string)preg_replace('/[^\p{L}\p{N}._ -]+/u', '_', basename((string)$file->getClientFilename()));
+        $name = mb_substr(trim($name, ' .') ?: 'file', -200);
+        $request = $this->provider($connection)->uploadRequest($reference, $connection, $name, $file->getStream());
+        if ($request === null) {
+            throw new InvalidActionException('notAllowed', 1764240420);
+        }
+        try {
+            $response = $this->client->send($request, self::OPTIONS);
+        } catch (\Throwable $throwable) {
+            throw $this->failure($connection, $throwable);
+        }
+        $markdown = Payload::string(Responses::json($response) ?? [], 'markdown');
+        if ($markdown === '') {
+            throw new FetchFailedException(new FetchError($connection->name(), FetchError::FAILED, 'Upload answer without Markdown'));
+        }
+        return $markdown;
+    }
+
+    /**
      * @return list<array{value: string, label: string}>
      * @throws FetchFailedException
      */
@@ -169,6 +201,7 @@ final readonly class ItemDetailService
         $text = static fn(string $name): string => is_string($input[$name] ?? null) ? trim($input[$name]) : '';
         switch ($action) {
             case ItemAction::COMMENT:
+            case ItemAction::INTERNAL_NOTE:
             case ItemAction::REQUEST_CHANGES:
                 $body = $text('body');
                 if ($body === '' || mb_strlen($body) > ItemAction::MAX_COMMENT) {

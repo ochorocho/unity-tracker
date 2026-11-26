@@ -16,6 +16,21 @@ const MIRROR_STYLES = [
 let instanceCounter = 0;
 
 /**
+ * GitLab quick actions (run when the comment is saved): name, arguments as a hint, item types (all if missing).
+ * See https://docs.gitlab.com/user/project/quick_actions/
+ */
+const QUICK_ACTIONS = [
+  ['assign', '@user'], ['unassign', '@user'], ['assign_reviewer', '@user', ['merge_request']], ['unassign_reviewer', '@user', ['merge_request']],
+  ['label', '~label'], ['unlabel', '~label'], ['milestone', '%milestone'], ['remove_milestone', ''],
+  ['close', ''], ['reopen', ''], ['title', 'text'], ['due', 'date', ['issue']], ['remove_due_date', '', ['issue']],
+  ['estimate', '1d 2h'], ['spend', '1h'], ['todo', ''], ['done', ''], ['subscribe', ''], ['unsubscribe', ''],
+  ['lock', ''], ['unlock', ''], ['react', ':emoji:'], ['draft', '', ['merge_request']], ['ready', '', ['merge_request']],
+  ['approve', '', ['merge_request']], ['unapprove', '', ['merge_request']], ['merge', '', ['merge_request']],
+  ['rebase', '', ['merge_request']], ['relate', '#issue', ['issue']], ['confidential', '', ['issue']],
+  ['copy_metadata', '#issue'], ['cc', '@user'], ['shrug', ''], ['tableflip', ''],
+];
+
+/**
  * Markdown editor like GitLab's: Write/Preview, a formatting toolbar, shortcuts and suggestions.
  *
  * <unity-tracker-markdown-editor name="body" value="…" rows="5" form="…" label="…">
@@ -25,7 +40,8 @@ let instanceCounter = 0;
  * the provider renders the preview (GitLab/GitHub flavoured, sanitised server side).
  *
  * Suggestions: "@" users, "#" issues (GitHub: and pull requests), "!" merge requests (GitLab),
- * "~" labels (GitLab), ":" emoji. Shortcuts: Ctrl/⌘+B, +I, +K, +Enter submits.
+ * "~" labels (GitLab), ":" emoji, "/" quick actions at the start of a line (GitLab). Shortcuts: Ctrl/⌘+B, +I, +K,
+ * +Enter submits. Files are uploaded (GitLab: config.uploadUrl) by the toolbar, by pasting or by dropping them.
  */
 export class MarkdownEditor extends LitElement {
   static properties = {
@@ -39,6 +55,7 @@ export class MarkdownEditor extends LitElement {
     suggestions: { state: true },
     activeIndex: { state: true },
     popupPosition: { state: true },
+    uploadError: { state: true },
   };
 
   constructor() {
@@ -53,6 +70,7 @@ export class MarkdownEditor extends LitElement {
     this.suggestions = [];
     this.activeIndex = 0;
     this.popupPosition = { top: 0, left: 0 };
+    this.uploadError = '';
     this.trigger = null;
     this.requestCounter = 0;
     this.suggestionCache = new Map();
@@ -117,7 +135,56 @@ export class MarkdownEditor extends LitElement {
       { key: 'taskList', text: '☑', run: () => this.prefixLines(() => '- [ ] ') },
       { key: 'table', text: '▦', run: () => this.insertBlock('| Header | Header |\n| ------ | ------ |\n| Cell   | Cell   |') },
       { key: 'collapsible', text: '▸', run: () => this.wrap('<details><summary>Details</summary>\n\n', '\n\n</details>', 'content') },
+      ...(this.config.uploadUrl ? [{ key: 'attach', text: '📎', run: () => this.querySelector('input[type="file"]')?.click() }] : []),
     ];
+  }
+
+  // --- Uploads ------------------------------------------------------------------------------------------------
+
+  /** Inserts a placeholder per file and replaces it with the provider's Markdown once uploaded. */
+  async upload(files) {
+    if (!this.config.uploadUrl) {
+      return;
+    }
+    this.uploadError = '';
+    await Promise.all([...files].map(async (file) => {
+      const placeholder = `![${this.t('editor.uploading').replace('%s', file.name)}]()`;
+      this.replaceSelection(`${placeholder}\n`);
+      const body = new FormData();
+      for (const [key, value] of Object.entries(this.config.reference ?? {})) {
+        body.set(key, String(value));
+      }
+      body.set('file', file);
+      let markdown = '';
+      try {
+        const response = await fetch(this.config.uploadUrl, { method: 'POST', body, headers: { Accept: 'application/json' } });
+        const result = await response.json();
+        if (!response.ok || !result.markdown) {
+          throw new Error(result.error ?? response.statusText);
+        }
+        markdown = result.markdown;
+      } catch (error) {
+        this.uploadError = `${this.t('editor.uploadFailed').replace('%s', file.name)} ${error.message}`;
+      }
+      const textarea = this.textarea;
+      textarea.value = textarea.value.replace(markdown === '' ? `${placeholder}\n` : placeholder, markdown);
+      this.value = textarea.value;
+    }));
+  }
+
+  onPaste(event) {
+    if (this.config.uploadUrl && event.clipboardData?.files.length) {
+      event.preventDefault();
+      this.upload(event.clipboardData.files);
+    }
+  }
+
+  onDrop(event) {
+    if (this.config.uploadUrl && event.dataTransfer?.files.length) {
+      event.preventDefault();
+      this.textarea.focus();
+      this.upload(event.dataTransfer.files);
+    }
   }
 
   /** Replaces the selection; execCommand keeps the browser's undo history where it is supported. */
@@ -258,6 +325,10 @@ export class MarkdownEditor extends LitElement {
       return null;
     }
     const before = textarea.value.slice(0, textarea.selectionStart);
+    const command = this.config.provider === 'gitlab' ? before.match(/(?:^|\n)\/(\w*)$/) : null;
+    if (command) {
+      return { char: '/', query: command[1], start: before.length - command[1].length - 1, kind: 'command' };
+    }
     const match = before.match(/(?:^|[\s(])([@#!~:])([^\s@#!~:]*)$/);
     if (!match || !this.triggers[match[1]]) {
       return null;
@@ -284,6 +355,15 @@ export class MarkdownEditor extends LitElement {
         .sort(([a], [b]) => Number(!a.startsWith(query)) - Number(!b.startsWith(query)) || a.localeCompare(b))
         .slice(0, MAX_LOCAL)
         .map(([name, emoji]) => ({ label: `${emoji} :${name}:`, insert: `:${name}:` })));
+      return;
+    }
+    if (trigger.kind === 'command') {
+      const query = trigger.query.toLowerCase();
+      const type = this.config.reference?.type;
+      this.showSuggestions(QUICK_ACTIONS
+        .filter(([name, , types]) => name.startsWith(query) && (!types || types.includes(type)))
+        .slice(0, MAX_LOCAL)
+        .map(([name, hint]) => ({ label: `/${name} ${hint}`.trim(), insert: `/${name}` })));
       return;
     }
     if (trigger.kind === 'label') {
@@ -451,6 +531,7 @@ export class MarkdownEditor extends LitElement {
             role="combobox" aria-autocomplete="list" aria-expanded=${this.suggestions.length ? 'true' : 'false'} aria-controls=${listboxId}
             aria-activedescendant=${this.suggestions.length ? `${listboxId}-${this.activeIndex}` : nothing}
             @input=${this.onInput} @keydown=${this.onKeydown} @click=${() => this.updateSuggestions()}
+            @paste=${this.onPaste} @drop=${this.onDrop}
             @blur=${() => setTimeout(() => this.closeSuggestions(), 150)}></textarea>
           <ul id=${listboxId} role="listbox" class="list-group ${this.suggestions.length ? '' : 'd-none'}"
             style="position: absolute; z-index: 1000; top: ${this.popupPosition.top}px; left: ${this.popupPosition.left}px; min-width: 15rem; max-width: 30rem; max-height: 16rem; overflow-y: auto; box-shadow: 0 .5rem 1rem rgb(0 0 0 / 15%)">
@@ -462,6 +543,8 @@ export class MarkdownEditor extends LitElement {
           </ul>
           ${writing ? nothing : html`<div class="p-3 text-break" style="min-height: ${this.rows * 1.5}em" data-preview aria-live="polite">${this.renderPreview()}</div>`}
         </div>
+        ${this.config.uploadUrl ? html`<input type="file" multiple hidden @change=${(event) => { this.upload(event.target.files); event.target.value = ''; }}>` : nothing}
+        ${this.uploadError ? html`<p class="text-danger small mb-0 px-2" role="alert">${this.uploadError}</p>` : nothing}
         <p class="form-text small mb-0 px-2 pb-1">${this.t('editor.hint')}</p>
       </div>
     `;

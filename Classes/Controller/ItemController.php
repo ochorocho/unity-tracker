@@ -10,6 +10,7 @@ namespace Ochorocho\UnityTracker\Controller;
 
 use Ochorocho\UnityTracker\Connection\Connection;
 use Ochorocho\UnityTracker\Connection\ConnectionRepository;
+use Ochorocho\UnityTracker\Connection\Provider;
 use Ochorocho\UnityTracker\Detail\ImageProxy;
 use Ochorocho\UnityTracker\Detail\InvalidActionException;
 use Ochorocho\UnityTracker\Detail\ItemAction;
@@ -25,6 +26,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamFactoryInterface;
+use Psr\Http\Message\UploadedFileInterface;
 use TYPO3\CMS\Backend\Attribute\AsController;
 use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
 use TYPO3\CMS\Core\Http\JsonResponse;
@@ -47,7 +49,7 @@ final readonly class ItemController
         'editor.write', 'editor.preview', 'editor.bold', 'editor.italic', 'editor.strikethrough', 'editor.heading',
         'editor.quote', 'editor.code', 'editor.link', 'editor.bulletList', 'editor.numberedList', 'editor.taskList',
         'editor.table', 'editor.collapsible', 'editor.nothingToPreview', 'editor.previewFailed', 'editor.loading',
-        'editor.toolbar', 'editor.hint', 'editor.requestFailed',
+        'editor.toolbar', 'editor.hint', 'editor.requestFailed', 'editor.attach', 'editor.uploading', 'editor.uploadFailed',
     ];
 
     public function __construct(
@@ -158,6 +160,28 @@ final readonly class ItemController
         ));
         $view->assignMultiple($this->variables($detail, $connection));
         return new JsonResponse(['html' => $view->render('ItemActivityFragment'), 'cursor' => $detail->olderCursor]);
+    }
+
+    /**
+     * A file pasted, dropped or attached in the Markdown editor: uploaded to the provider, answers its Markdown.
+     */
+    public function uploadAction(ServerRequestInterface $request): ResponseInterface
+    {
+        $file = $request->getUploadedFiles()['file'] ?? null;
+        try {
+            $reference = ItemReference::fromArray((array)$request->getParsedBody());
+            $connection = $this->connection($reference);
+            if (!$file instanceof UploadedFileInterface) {
+                throw new InvalidActionException('upload', 1764240504);
+            }
+            return new JsonResponse(['markdown' => $this->itemDetailService->upload($reference, $connection, $file)]);
+        } catch (InvalidActionException $exception) {
+            return new JsonResponse(['error' => $this->context->translate('item.error.' . $exception->getMessage())], 400);
+        } catch (\InvalidArgumentException) {
+            return new JsonResponse(['error' => $this->context->translate('item.error.reference')], 400);
+        } catch (FetchFailedException $exception) {
+            return new JsonResponse(['error' => $this->context->errorMessage($exception->error)], 502);
+        }
     }
 
     public function previewAction(ServerRequestInterface $request): ResponseInterface
@@ -275,7 +299,26 @@ final readonly class ItemController
             'timeline' => $this->timeline($detail, $connection),
             'can' => array_fill_keys($detail->actions, true),
             'reactionChoices' => Reactions::CHOICES,
+            'linked' => $this->linked($detail),
         ];
+    }
+
+    /**
+     * Linked items with the URL that opens them in the sheet (same connection); "" if it cannot.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function linked(ItemDetail $detail): array
+    {
+        return array_map(function (array $item) use ($detail): array {
+            try {
+                $reference = ItemReference::fromArray(['connection' => $detail->reference->connection] + $item);
+                $sheetUrl = $this->context->uri('item', $reference->toArray());
+            } catch (\InvalidArgumentException) {
+                $sheetUrl = '';
+            }
+            return $item + ['sheetUrl' => $sheetUrl, 'reference' => $item['project'] . ($item['type'] === 'merge_request' ? '!' : '#') . $item['number']];
+        }, $detail->linked);
     }
 
     /**
@@ -309,6 +352,10 @@ final readonly class ItemController
             'reference' => $detail->reference->toArray(),
             'previewUrl' => $this->context->uri('itemPreview'),
             'suggestUrl' => $this->context->uri('itemSuggest'),
+            // GitLab only: GitHub has no upload API.
+            'uploadUrl' => $connection->provider === Provider::GitLab && ($detail->allows(ItemAction::COMMENT) || $detail->allows(ItemAction::EDIT))
+                ? $this->context->uri('itemUpload')
+                : '',
             'labels' => array_column($detail->availableLabels, 'name'),
             'l10n' => $labels,
         ], JSON_THROW_ON_ERROR);

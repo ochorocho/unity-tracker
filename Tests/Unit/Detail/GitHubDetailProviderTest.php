@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace Ochorocho\UnityTracker\Tests\Unit\Detail;
 
 use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Psr7\Utils;
 use Ochorocho\UnityTracker\Connection\Provider;
 use Ochorocho\UnityTracker\Detail\GitHubDetailProvider;
 use Ochorocho\UnityTracker\Detail\ItemAction;
@@ -136,6 +137,20 @@ final class GitHubDetailProviderTest extends UnitTestCase
 
         self::assertSame('PATCH https://api.github.com/repos/acme/app/issues/42', $request->getMethod() . ' ' . $request->getUri());
         self::assertSame('{"state":"closed","state_reason":"not_planned"}', (string)$request->getBody());
+    }
+
+    #[Test]
+    public function closingIssuesAreLinked(): void
+    {
+        self::assertSame([
+            ['relation' => 'closes', 'type' => 'issue', 'project' => 'acme/app', 'number' => 7, 'title' => 'Login loops', 'state' => 'open', 'url' => 'https://github.com/acme/app/issues/7'],
+        ], $this->parse()->linked);
+    }
+
+    #[Test]
+    public function thereIsNoUploadApi(): void
+    {
+        self::assertNull($this->subject->uploadRequest($this->reference(), Fixture::connection(Provider::GitHub), 'a.png', Utils::streamFor('png')));
     }
 
     #[Test]

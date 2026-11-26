@@ -539,6 +539,51 @@
 			<trans-unit id="item.done.toggleTask" resname="item.done.toggleTask">
 				<source>Task list updated.</source>
 			</trans-unit>
+			<trans-unit id="item.error.upload" resname="item.error.upload">
+				<source>The file is empty or larger than 10 MB.</source>
+			</trans-unit>
+			<trans-unit id="editor.attach" resname="editor.attach">
+				<source>Attach a file (or paste/drop it)</source>
+			</trans-unit>
+			<trans-unit id="editor.uploading" resname="editor.uploading">
+				<source>Uploading %s…</source>
+			</trans-unit>
+			<trans-unit id="editor.uploadFailed" resname="editor.uploadFailed">
+				<source>Upload of %s failed:</source>
+			</trans-unit>
+			<trans-unit id="item.action.internalNote" resname="item.action.internalNote">
+				<source>Add internal note</source>
+			</trans-unit>
+			<trans-unit id="item.done.internalNote" resname="item.done.internalNote">
+				<source>Internal note added.</source>
+			</trans-unit>
+			<trans-unit id="item.internal" resname="item.internal">
+				<source>Internal</source>
+			</trans-unit>
+			<trans-unit id="item.internal.title" resname="item.internal.title">
+				<source>Only project members with at least the Reporter role see this.</source>
+			</trans-unit>
+			<trans-unit id="item.linked" resname="item.linked">
+				<source>Linked items</source>
+			</trans-unit>
+			<trans-unit id="item.relation.closes" resname="item.relation.closes">
+				<source>Closes</source>
+			</trans-unit>
+			<trans-unit id="item.relation.closedBy" resname="item.relation.closedBy">
+				<source>Closed by</source>
+			</trans-unit>
+			<trans-unit id="item.relation.relatesTo" resname="item.relation.relatesTo">
+				<source>Relates to</source>
+			</trans-unit>
+			<trans-unit id="item.relation.blocks" resname="item.relation.blocks">
+				<source>Blocks</source>
+			</trans-unit>
+			<trans-unit id="item.relation.isBlockedBy" resname="item.relation.isBlockedBy">
+				<source>Is blocked by</source>
+			</trans-unit>
+			<trans-unit id="item.relation.mergeRequest" resname="item.relation.mergeRequest">
+				<source>Related merge request</source>
+			</trans-unit>
 			<trans-unit id="item.checks.success" resname="item.checks.success">
 				<source>Checks passed</source>
 			</trans-unit>

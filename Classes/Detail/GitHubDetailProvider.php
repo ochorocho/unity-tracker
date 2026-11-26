@@ -13,6 +13,7 @@ use Ochorocho\UnityTracker\Connection\Connection;
 use Ochorocho\UnityTracker\Provider\Payload;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\StreamInterface;
 
 /**
  * Details through one GraphQL query (bodyHTML and viewerCan* permissions), actions through the REST API.
@@ -34,6 +35,7 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
               ... on Issue {
                 %1$s
                 viewerCanSetMilestone
+                closedByPullRequestsReferences(first: 10, includeClosedPrs: true) { nodes { number title state url repository { nameWithOwner } } }
                 issueTimeline: timelineItems(last: 40, before: $before, itemTypes: [%2$s]) {
                   pageInfo { hasPreviousPage startCursor }
                   nodes { __typename %3$s }
@@ -57,6 +59,7 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
                 isDraft merged mergeable baseRefName headRefName reviewDecision
                 reviewRequests(first: 20) { nodes { requestedReviewer { ... on User { login } ... on Bot { login } } } }
                 latestReviews(first: 20) { nodes { state author { login } } }
+                closingIssuesReferences(first: 10) { nodes { number title state url repository { nameWithOwner } } }
                 mergeStateStatus headRefOid headRef { id } statusCheckRollup { state } autoMergeRequest { enabledAt }
                 viewerCanDeleteHeadRef viewerCanUpdateBranch viewerCanEnableAutoMerge viewerCanDisableAutoMerge
                 viewerLatestReview { state }
@@ -247,6 +250,10 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
             ))),
             subscribed: Payload::string($target, 'viewerSubscription') === 'SUBSCRIBED',
             merge: $isPullRequest ? $this->mergeState($target, $repository) : null,
+            linked: array_values(array_filter(array_map(
+                fn(array $node): ?array => $this->linkedItem($node, $isPullRequest ? 'closes' : 'closedBy', $isPullRequest ? 'issue' : 'pull_request'),
+                Payload::list($target, $isPullRequest ? 'closingIssuesReferences' : 'closedByPullRequestsReferences', 'nodes')
+            ))),
         );
         $detail = $this->withActions($detail, $target, Payload::string($repository, 'viewerPermission'));
 
@@ -337,6 +344,14 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
     public function parsePreview(ResponseInterface $response): string
     {
         return (string)$response->getBody();
+    }
+
+    /**
+     * GitHub has no API for comment attachments.
+     */
+    public function uploadRequest(ItemReference $reference, Connection $connection, string $filename, StreamInterface $file): ?RequestInterface
+    {
+        return null;
     }
 
     public function suggestionRequest(ItemReference $reference, Connection $connection, string $kind, string $query): ?RequestInterface
@@ -587,6 +602,28 @@ final readonly class GitHubDetailProvider implements DetailProviderInterface
             Payload::string($node, 'id'),
             Payload::bool($node, 'viewerCanReact'),
         );
+    }
+
+    /**
+     * @param array<mixed> $node
+     * @return array{relation: string, type: string, project: string, number: int, title: string, state: string, url: string}|null
+     */
+    private function linkedItem(array $node, string $relation, string $type): ?array
+    {
+        $number = Payload::int($node, 'number');
+        $project = Payload::string($node, 'repository', 'nameWithOwner');
+        if ($number < 1 || $project === '') {
+            return null;
+        }
+        return [
+            'relation' => $relation,
+            'type' => $type,
+            'project' => $project,
+            'number' => $number,
+            'title' => Payload::string($node, 'title'),
+            'state' => strtolower(Payload::string($node, 'state')) === 'open' ? 'open' : (Payload::string($node, 'state') === 'MERGED' ? 'merged' : 'closed'),
+            'url' => Payload::url($node, 'url'),
+        ];
     }
 
     /**

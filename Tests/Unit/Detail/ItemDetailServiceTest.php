@@ -13,6 +13,8 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Psr7\UploadedFile;
+use GuzzleHttp\Psr7\Utils;
 use Ochorocho\UnityTracker\Connection\Provider;
 use Ochorocho\UnityTracker\Detail\GitHubDetailProvider;
 use Ochorocho\UnityTracker\Detail\GitLabDetailProvider;
@@ -275,6 +277,43 @@ final class ItemDetailServiceTest extends UnitTestCase
 
         $this->expectException(InvalidActionException::class);
         $this->subject()->perform($this->reference(), Fixture::connection(Provider::GitHub), ItemAction::MERGE, ['method' => 'rebase']);
+    }
+
+    #[Test]
+    public function uploadSendsACleanFileNameAndAnswersTheMarkdown(): void
+    {
+        $this->actionResponse = new Response(201, [], '{"markdown": "![a_b.png](/uploads/abc/a_b.png)"}');
+        $file = new UploadedFile(Utils::streamFor('png'), 3, UPLOAD_ERR_OK, '../a]b.png', 'image/png');
+
+        $markdown = $this->subject()->upload($this->reference(), Fixture::connection(Provider::GitLab), $file);
+
+        self::assertSame('![a_b.png](/uploads/abc/a_b.png)', $markdown);
+        self::assertSame('POST https://gitlab.com/api/v4/projects/acme%2Fapp/uploads', $this->sent[0]);
+    }
+
+    /**
+     * @return array<string, array{UploadedFile, Provider}>
+     */
+    public static function rejectedUploads(): array
+    {
+        return [
+            'empty' => [new UploadedFile(Utils::streamFor(''), 0, UPLOAD_ERR_OK, 'a.png'), Provider::GitLab],
+            'too large' => [new UploadedFile(Utils::streamFor('x'), ItemDetailService::MAX_UPLOAD + 1, UPLOAD_ERR_OK, 'a.png'), Provider::GitLab],
+            'upload error' => [new UploadedFile(Utils::streamFor('x'), 1, UPLOAD_ERR_PARTIAL, 'a.png'), Provider::GitLab],
+            'GitHub' => [new UploadedFile(Utils::streamFor('x'), 1, UPLOAD_ERR_OK, 'a.png'), Provider::GitHub],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('rejectedUploads')]
+    public function uploadIsRejected(UploadedFile $file, Provider $provider): void
+    {
+        $this->expectException(InvalidActionException::class);
+        try {
+            $this->subject()->upload($this->reference(), Fixture::connection($provider), $file);
+        } finally {
+            self::assertSame([], $this->sent);
+        }
     }
 
     #[Test]

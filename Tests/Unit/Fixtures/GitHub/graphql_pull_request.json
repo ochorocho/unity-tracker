@@ -332,7 +332,29 @@
         "viewerCanDeleteHeadRef": true,
         "viewerCanUpdateBranch": true,
         "viewerCanEnableAutoMerge": true,
-        "viewerCanDisableAutoMerge": false
+        "viewerCanDisableAutoMerge": false,
+        "closingIssuesReferences": {
+          "nodes": [
+            {
+              "number": 7,
+              "title": "Login loops",
+              "state": "OPEN",
+              "url": "https://github.com/acme/app/issues/7",
+              "repository": {
+                "nameWithOwner": "acme/app"
+              }
+            },
+            {
+              "number": 0,
+              "title": "x",
+              "state": "OPEN",
+              "url": "",
+              "repository": {
+                "nameWithOwner": "acme/app"
+              }
+            }
+          ]
+        }
       },
       "milestones": {
         "nodes": [

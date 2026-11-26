@@ -48,6 +48,10 @@ return [
                 'target' => ItemController::class . '::previewAction',
                 'methods' => ['POST'],
             ],
+            'itemUpload' => [
+                'target' => ItemController::class . '::uploadAction',
+                'methods' => ['POST'],
+            ],
             'itemActivity' => [
                 'target' => ItemController::class . '::activityAction',
             ],
