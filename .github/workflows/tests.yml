@@ -33,11 +33,15 @@ jobs:
             php: '8.5'
             experimental: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ddev/github-action-setup-ddev@v1
         with:
           autostart: false
+
+      # A failed provisioning (setup-typo3.sh, e.g. composer) fails `ddev start` instead of a later step.
+      - name: Fail on hook failures
+        run: ddev config global --fail-on-hook-fail
 
       - name: Select TYPO3 ${{ matrix.typo3 }}
         if: matrix.typo3 != '^14.3'
@@ -70,7 +74,7 @@ jobs:
 
       - name: Playwright results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-typo3-${{ matrix.php }}
           path: |

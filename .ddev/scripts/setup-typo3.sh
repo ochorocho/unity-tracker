@@ -80,7 +80,7 @@ if [ ! -f "${COMPOSER_JSON}" ] || [ "${TYPO3_VERSION}" != "${CURRENT_TYPO3_VERSI
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.64",
         "phpstan/phpstan": "^2.1",
-        "typo3/coding-standards": "^0.8",
+        "typo3/coding-standards": "^0.9",
         "typo3/testing-framework": "^9.0 || ^10.0"
     },
     "autoload-dev": {

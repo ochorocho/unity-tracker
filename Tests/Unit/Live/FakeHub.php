@@ -27,7 +27,7 @@ final readonly class FakeHub implements HubInterface
 
     public function getFactory(): ?TokenFactoryInterface
     {
-        return $this->configured ? new class () implements TokenFactoryInterface {
+        return $this->configured ? new class implements TokenFactoryInterface {
             public function create(array $grants = [], array $additionalClaims = []): string
             {
                 return 'token';
