@@ -26,3 +26,10 @@ web_environment:
     - TYPO3_DB_USERNAME=db
     - TYPO3_CONTEXT=Development
 corepack_enable: false
+web_extra_daemons:
+    - name: messenger-worker
+      command: bash /var/www/html/.ddev/scripts/messenger-worker.sh
+      directory: /var/www/html/Build
+    - name: messenger-worker-test
+      command: bash /var/www/html/.ddev/scripts/messenger-worker.sh test
+      directory: /var/www/html/Build

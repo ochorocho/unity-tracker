@@ -127,10 +127,31 @@ Extension settings (`ext_conf_template.txt`):
   at internal addresses.
 - `cacheLifetime`: seconds an overview stays cached per user (default 300, `0` disables). The
   module's reload button bypasses the cache. Results with errors are never cached.
+- `refreshInterval`: seconds between background refreshes of the overviews of logged-in users
+  (default 120, `0` disables). Only with live updates, see below.
 
 Requests go through TYPO3's Guzzle client, so `$GLOBALS['TYPO3_CONF_VARS']['HTTP']` (proxy, CA
 bundle, …) applies. All requests of all connections run concurrently. A failing connection is
 reported in the module and doesn't hide the others.
+
+## Live updates (optional)
+
+With [`ochorocho/typo3-mercure`](https://packagist.org/packages/ochorocho/typo3-mercure) installed and its
+hub configured (`MERCURE_URL`, `MERCURE_PUBLIC_URL`, the JWT keys), open pages update themselves:
+
+- **Detail sheet**: an action in another sheet of the same item, by any backend user, re-renders the sheet. While
+  you are typing, a notification offers a reload instead.
+- **Overview**: a messenger worker fetches the overview again after each action and every `refreshInterval`
+  seconds for users with a live backend session, and pushes the rows when they changed. Filters and the
+  selected tab stay.
+
+Updates are private Mercure updates: the subscriber cookie of EXT:mercure grants each user their own overview
+topic and the items they have opened (which their token can read). The hub has to be on the backend's
+origin (e.g. `/.well-known/mercure`) so that cookie and CSP allow it.
+
+The overview refresh needs a messenger worker (`vendor/bin/typo3 messenger:consume doctrine`): the refresh
+messages go to EXT:mercure's transport (`transport`, default `doctrine`). With that setting empty, or without
+EXT:mercure, everything works as before: the overview reloads when a sheet that changed something closes.
 
 ## Development
 

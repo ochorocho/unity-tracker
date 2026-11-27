@@ -32,6 +32,9 @@
 		"typo3/cms-core": "^14.3 || ^15.0",
 		"typo3/cms-fluid": "^14.3 || ^15.0"
 	},
+	"suggest": {
+		"ochorocho/typo3-mercure": "Live updates of the overview and the detail sheet through a Mercure hub"
+	},
 	"config": {
 		"sort-packages": true,
 		"allow-plugins": {

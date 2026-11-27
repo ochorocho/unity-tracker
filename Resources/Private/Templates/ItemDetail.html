@@ -20,7 +20,7 @@
             [data-item-sidebar] { display: block; }
         }
     </style>
-    <div data-item-detail data-editor-config="{editorConfig}" {f:if(condition: changed, then: 'data-item-changed')}>
+    <div data-item-detail data-editor-config="{editorConfig}" data-live-url="{liveUrl}" {f:if(condition: changed, then: 'data-item-changed')}>
         <f:if condition="{error}">
             <f:then>
                 <f:be.infobox title="{f:translate(key: 'item.error.title', extensionName: 'UnityTracker')}" state="2">{error}</f:be.infobox>

@@ -19,6 +19,9 @@ use Ochorocho\UnityTracker\Detail\ItemDetailService;
 use Ochorocho\UnityTracker\Detail\ItemReference;
 use Ochorocho\UnityTracker\Detail\ProviderHtml;
 use Ochorocho\UnityTracker\Detail\Reactions;
+use Ochorocho\UnityTracker\Live\LiveUpdates;
+use Ochorocho\UnityTracker\Live\OverviewRefresh;
+use Ochorocho\UnityTracker\Live\Topics;
 use Ochorocho\UnityTracker\Service\FetchError;
 use Ochorocho\UnityTracker\Service\FetchFailedException;
 use Ochorocho\UnityTracker\Service\OverviewService;
@@ -50,6 +53,7 @@ final readonly class ItemController
         'editor.quote', 'editor.code', 'editor.link', 'editor.bulletList', 'editor.numberedList', 'editor.taskList',
         'editor.table', 'editor.collapsible', 'editor.nothingToPreview', 'editor.previewFailed', 'editor.loading',
         'editor.toolbar', 'editor.hint', 'editor.requestFailed', 'editor.attach', 'editor.uploading', 'editor.uploadFailed',
+        'item.live.changed', 'item.live.updated', 'item.live.reload',
     ];
 
     public function __construct(
@@ -64,6 +68,8 @@ final readonly class ItemController
         private StreamFactoryInterface $streamFactory,
         private ViewFactoryInterface $viewFactory,
         private PageRenderer $pageRenderer,
+        private LiveUpdates $liveUpdates,
+        private OverviewRefresh $overviewRefresh,
     ) {}
 
     public function showAction(ServerRequestInterface $request): ResponseInterface
@@ -92,6 +98,10 @@ final readonly class ItemController
             'error' => $error,
             'changed' => (bool)($query['changed'] ?? false),
             'editorConfig' => $detail !== null && $connection !== null ? $this->editorConfig($detail, $connection) : '',
+            // Changes by other sheets (any backend user) and the user's own overview refreshes.
+            'liveUrl' => $detail !== null && $connection !== null
+                ? $this->liveUpdates->subscribe($request, Topics::user($this->context->backendUserId()), Topics::item($connection, $detail->reference))
+                : '',
         ]);
         return $view->renderResponse('ItemDetail');
     }
@@ -120,6 +130,7 @@ final readonly class ItemController
         }
 
         $this->overviewService->invalidate($this->context->backendUserId());
+        $this->announce($connection, $reference, $action, $body['origin'] ?? null);
         $reference = $action === ItemAction::MARK_DONE ? $reference->withoutTodo() : $reference;
         $message = $this->context->translate('item.done.' . $action);
         if (!$background) {
@@ -240,6 +251,20 @@ final readonly class ItemController
             // SVG may contain scripts: never run them, also when the image is opened on its own.
             ->withHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox")
             ->withBody($this->streamFactory->createStream($image['body']));
+    }
+
+    /**
+     * Tells the other open sheets of the item (the sending sheet recognises its own origin) and queues a refresh
+     * of the user's overview.
+     */
+    private function announce(Connection $connection, ItemReference $reference, string $action, mixed $origin): void
+    {
+        $this->liveUpdates->publish(Topics::item($connection, $reference), [
+            'type' => 'item-changed',
+            'action' => $action,
+            'origin' => is_string($origin) && preg_match('/^[A-Za-z0-9-]{1,64}$/', $origin) === 1 ? $origin : '',
+        ]);
+        $this->overviewRefresh->request($this->context->backendUserId());
     }
 
     /**

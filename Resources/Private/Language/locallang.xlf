@@ -551,6 +551,15 @@
 			<trans-unit id="editor.uploadFailed" resname="editor.uploadFailed">
 				<source>Upload of %s failed:</source>
 			</trans-unit>
+			<trans-unit id="item.live.changed" resname="item.live.changed">
+				<source>This item was changed in another window. Reload to see the changes, unsaved input is lost.</source>
+			</trans-unit>
+			<trans-unit id="item.live.updated" resname="item.live.updated">
+				<source>This item was changed in another window and has been updated.</source>
+			</trans-unit>
+			<trans-unit id="item.live.reload" resname="item.live.reload">
+				<source>Reload</source>
+			</trans-unit>
 			<trans-unit id="item.action.internalNote" resname="item.action.internalNote">
 				<source>Add internal note</source>
 			</trans-unit>

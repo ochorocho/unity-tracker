@@ -1,0 +1,32 @@
+# Mercure hub for ochorocho/typo3-mercure, like the Helm chart of typo3-kate: served on the site's own
+# host under /.well-known/mercure (nginx proxies it, see nginx/mercure.conf), TYPO3 publishes internally.
+# Development keys only.
+x-mercure-keys: &mercure-keys
+  MERCURE_PUBLISHER_JWT_KEY: ddev-unity-tracker-publisher-key-0123456789
+  MERCURE_SUBSCRIBER_JWT_KEY: ddev-unity-tracker-subscriber-key-0123456789
+
+services:
+  mercure:
+    container_name: ddev-${DDEV_SITENAME}-mercure
+    image: dunglas/mercure:v1.1.6
+    restart: "no"
+    expose:
+      - "80"
+    environment:
+      <<: *mercure-keys
+      SERVER_NAME: ":80"
+      MERCURE_PUBLISHER_JWT_ALG: HS256
+      MERCURE_SUBSCRIBER_JWT_ALG: HS256
+      MERCURE_TRUSTED_ISSUERS: ${DDEV_PRIMARY_URL}
+      MERCURE_EXTRA_DIRECTIVES: resource_identifier ${DDEV_PRIMARY_URL}/.well-known/mercure
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: $DDEV_APPROOT
+
+  web:
+    links:
+      - mercure
+    environment:
+      <<: *mercure-keys
+      MERCURE_URL: http://mercure/.well-known/mercure
+      MERCURE_PUBLIC_URL: ${DDEV_PRIMARY_URL}/.well-known/mercure

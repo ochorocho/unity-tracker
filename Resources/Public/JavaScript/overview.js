@@ -12,7 +12,8 @@ import { emptyFilter, isEmpty, matches, normalize, sameFilter } from '@ochorocho
  * The overview: filter bar, saved filters, one tab per category with a sortable item table.
  * Filtering runs here on the loaded items; saving goes to the module's filter form.
  *
- * All attributes are JSON, rendered by OverviewController.
+ * All attributes are JSON, rendered by OverviewController. With live updates (urls.live, EXT:mercure) the
+ * messenger worker pushes new rows whenever the overview changed: they replace the items, filters stay.
  */
 export class Overview extends LitElement {
   static properties = {
@@ -42,6 +43,48 @@ export class Overview extends LitElement {
 
   createRenderRoot() {
     return this;
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.source?.close();
+    this.source = null;
+  }
+
+  updated(changed) {
+    if (changed.has('urls') && this.urls.live && !this.source) {
+      this.listen(this.urls.live);
+    }
+  }
+
+  listen(url) {
+    this.source = new EventSource(url, { withCredentials: true });
+    this.source.addEventListener('message', (event) => {
+      let update;
+      try {
+        update = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      if (update.type === 'overview' && Array.isArray(update.items)) {
+        this.items = update.items;
+        this.showFetchedAt(update.fetchedAt);
+      }
+    });
+  }
+
+  /**
+   * The "Loaded …" line above the overview (rendered by the template, outside this element).
+   */
+  showFetchedAt(value) {
+    const element = document.querySelector('[data-fetched-at]');
+    const date = new Date(value);
+    if (!element || Number.isNaN(date.getTime())) {
+      return;
+    }
+    const pad = (number) => String(number).padStart(2, '0');
+    const formatted = `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    element.textContent = this.label('overview.fetchedAt').replace('%s', formatted);
   }
 
   willUpdate(changed) {
