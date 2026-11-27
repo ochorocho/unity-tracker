@@ -19,7 +19,7 @@
             </div>
         </f:then>
         <f:else>
-            <article class="card mb-2" data-thread="{entry.id}" {f:if(condition: entry.resolved, then: 'data-resolved')}>
+            <article class="card mb-2" style="overflow: visible" data-thread="{entry.id}"{f:if(condition: entry.resolved, then: 'data-resolved')}>
                 <f:if condition="{entry.path} || {entry.resolvable} || {entry.review}">
                     <div class="card-header d-flex flex-wrap align-items-center gap-2 small">
                         <f:if condition="{entry.review}">

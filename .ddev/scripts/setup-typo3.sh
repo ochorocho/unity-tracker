@@ -61,6 +61,7 @@ if [ ! -f "${COMPOSER_JSON}" ] || [ "${TYPO3_VERSION}" != "${CURRENT_TYPO3_VERSI
     "license": "GPL-2.0-or-later",
     "require": {
         "php": "^8.2",
+        "ochorocho/typo3-mercure": "@dev",
         "ochorocho/unity-tracker": "@dev",
         "typo3/cms-backend": "${TYPO3_VERSION}",
         "typo3/cms-belog": "${TYPO3_VERSION}",
@@ -79,7 +80,7 @@ if [ ! -f "${COMPOSER_JSON}" ] || [ "${TYPO3_VERSION}" != "${CURRENT_TYPO3_VERSI
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.64",
         "phpstan/phpstan": "^2.1",
-        "typo3/coding-standards": "^0.8",
+        "typo3/coding-standards": "^0.9",
         "typo3/testing-framework": "^9.0 || ^10.0"
     },
     "autoload-dev": {
@@ -105,7 +106,11 @@ EOF
 fi
 
 # 1. Composer
-if [ ! -f vendor/autoload.php ] || [ ! -x vendor/bin/typo3 ] || [ ! -x vendor/bin/phpunit ]; then
+if ! grep -q '"ochorocho/typo3-mercure"' "${COMPOSER_JSON}"; then
+    # Installs created before EXT:mercure was added to the template above
+    composer require --no-update --no-interaction 'ochorocho/typo3-mercure:@dev'
+fi
+if [ ! -f vendor/autoload.php ] || [ ! -x vendor/bin/typo3 ] || [ ! -x vendor/bin/phpunit ] || [ ! -d vendor/ochorocho/typo3-mercure ]; then
     echo "[${PROJECT_NAME}] Running composer update in Build/ ..."
     composer update --no-interaction --no-progress
 fi
@@ -207,11 +212,20 @@ if (($_SERVER['HTTP_X_TEST_RUN'] ?? '') === '1') {
     $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['unity_tracker']['allowedHosts'] = \Ochorocho\UnityTracker\Tests\Playwright\FakeGitLab::HOST;
 }
 
-// CLI: `TYPO3_DB_NAME=test vendor/bin/typo3 …`
+// CLI: `TYPO3_DB_NAME=test vendor/bin/typo3 …`; with the test database also the fake GitLab (messenger worker
+// of the Playwright runs, see .ddev/scripts/messenger-worker.sh).
 if (PHP_SAPI === 'cli' && getenv('TYPO3_DB_NAME')) {
     $GLOBALS['TYPO3_CONF_VARS']['DB']['Connections']['Default']['dbname'] = getenv('TYPO3_DB_NAME');
+    if (getenv('TYPO3_DB_NAME') === 'test') {
+        require_once '/var/www/html/Tests/playwright/fake-gitlab/FakeGitLab.php';
+        $GLOBALS['TYPO3_CONF_VARS']['HTTP']['handler']['unitytracker-fake-gitlab'] = \Ochorocho\UnityTracker\Tests\Playwright\FakeGitLab::middleware();
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['unity_tracker']['allowedHosts'] = \Ochorocho\UnityTracker\Tests\Playwright\FakeGitLab::HOST;
+    }
 }
 PHP
+
+# The messenger workers (web_extra_daemons) start before this hook: restart them with the final configuration.
+sudo supervisorctl restart 'webextradaemons:*' >/dev/null 2>&1 || true
 
 echo "[${PROJECT_NAME}] TYPO3 is ready."
 echo "[${PROJECT_NAME}] Backend:  ${SITE_BASE_URL}typo3   (${ADMIN_USER} / ${ADMIN_PASS})"

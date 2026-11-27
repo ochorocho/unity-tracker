@@ -46,6 +46,15 @@ final readonly class OverviewService
         return $overview;
     }
 
+    /**
+     * The cached overview without fetching, null if there is none (or caching is off).
+     */
+    public function cached(int $backendUser): ?Overview
+    {
+        $cached = $this->settings->cacheLifetime > 0 ? $this->cache->get($this->identifier($backendUser)) : null;
+        return $cached instanceof Overview ? $cached : null;
+    }
+
     public function invalidate(int $backendUser): void
     {
         $this->cache->remove($this->identifier($backendUser));

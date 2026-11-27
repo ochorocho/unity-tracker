@@ -1,0 +1,84 @@
+# All checks inside DDEV, like .gitlab-ci.yml: `ddev start` provisions TYPO3 (db + test databases, Mercure hub,
+# messenger workers), then the PHP checks and the Playwright suite run.
+
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: TYPO3 ${{ matrix.typo3 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # The development branch of the next major may break at any time.
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - typo3: '^14.3'
+            php: '8.4'
+            experimental: false
+          - typo3: '15.0.x-dev'
+            php: '8.5'
+            experimental: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ddev/github-action-setup-ddev@v1
+        with:
+          autostart: false
+
+      # A failed provisioning (setup-typo3.sh, e.g. composer) fails `ddev start` instead of a later step.
+      - name: Fail on hook failures
+        run: ddev config global --fail-on-hook-fail
+
+      - name: Select TYPO3 ${{ matrix.typo3 }}
+        if: matrix.typo3 != '^14.3'
+        run: |
+          ddev config --php-version='${{ matrix.php }}'
+          ddev dotenv set .ddev/.env.web --typo3-version='${{ matrix.typo3 }}'
+
+      - name: Start DDEV (provisions TYPO3)
+        run: ddev start
+
+      - name: PHP lint
+        run: ddev exec -d /var/www/html composer ci:php:lint
+
+      - name: PHPStan
+        run: ddev exec -d /var/www/html composer ci:php:stan
+
+      - name: Coding standards
+        run: ddev exec -d /var/www/html composer ci:php:cs
+
+      - name: Unit tests
+        run: ddev exec -d /var/www/html composer ci:php:unit
+
+      - name: composer.json
+        run: ddev exec -d /var/www/html composer ci:composer:validate
+
+      - name: Playwright
+        run: |
+          ddev npm ci
+          ddev playwright test
+
+      - name: Playwright results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-typo3-${{ matrix.php }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore

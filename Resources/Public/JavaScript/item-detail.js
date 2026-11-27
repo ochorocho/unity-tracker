@@ -4,6 +4,7 @@
 // Markup triggers (.t3js-modal-trigger): the merge confirmation.
 import '@typo3/backend/modal.js';
 import Notification from '@typo3/backend/notification.js';
+import ImmediateAction from '@typo3/backend/action-button/immediate-action.js';
 import '@ochorocho/unity-tracker/markdown-editor.js';
 
 /**
@@ -13,9 +14,13 @@ import '@ochorocho/unity-tracker/markdown-editor.js';
  * - [data-load-older] puts an older page of the timeline in front of [data-timeline],
  * - a task list checkbox [data-task-index] sends the [data-task-form] of its [data-task-scope],
  * - user fields [data-user-suggest] fill their <datalist> with the provider's users as you type,
- * - after a change the overview is told, it reloads once the sheet is closed.
+ * - after a change the overview is told, it reloads once the sheet is closed,
+ * - live updates ([data-live-url], EXT:mercure): a change made in another sheet of the item re-renders the body,
+ *   or offers a reload while something is being edited. The sheet's own changes carry its origin.
  */
 const root = document.querySelector('[data-item-detail]');
+// Not crypto.randomUUID(): it exists in secure contexts only (the backend may run on plain http).
+const origin = Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, '0')).join('');
 
 function announceChange() {
   if (window.top && window.top !== window) {
@@ -93,6 +98,7 @@ function setBusy(form, busy) {
 async function submitInBackground(form, submitter) {
   const data = new FormData(form, submitter);
   data.set('ajax', '1');
+  data.set('origin', origin);
   setBusy(form, true);
   try {
     // Not form.action: the submit buttons are named "action" and shadow that property.
@@ -140,7 +146,59 @@ async function loadOlder(button) {
   }
 }
 
+/**
+ * Input that a re-render would throw away: an open inline field or a Markdown editor with text.
+ */
+function isEditing() {
+  const openField = [...root.querySelectorAll('[data-inline-field]')].some((field) => !field.hidden);
+  // Hidden editors (closed inline fields) hold the saved text, the visible ones (new comment) start empty.
+  const typed = [...root.querySelectorAll('textarea')]
+    .some((textarea) => !textarea.closest('[hidden]') && textarea.value.trim() !== textarea.defaultValue.trim());
+  return openField || typed || root.querySelector('form[aria-busy="true"]') !== null;
+}
+
+async function onForeignChange() {
+  if (isEditing()) {
+    Notification.info(l10n('item.live.changed'), '', 0, [
+      { label: l10n('item.live.reload'), action: new ImmediateAction(() => window.location.reload()) },
+    ]);
+    return;
+  }
+  try {
+    const response = await fetch(window.location.href, { headers: { Accept: 'text/html' } });
+    const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+    const body = page.querySelector('[data-item-body]');
+    if (!response.ok || !body || isEditing()) {
+      return;
+    }
+    root.querySelector('[data-item-body]').innerHTML = body.innerHTML;
+    Notification.info(l10n('item.live.updated'));
+  } catch {
+    // The next change or a reload shows the new state.
+  }
+}
+
+function listen(url) {
+  const source = new EventSource(url, { withCredentials: true });
+  source.addEventListener('message', (event) => {
+    let update;
+    try {
+      update = JSON.parse(event.data);
+    } catch {
+      return;
+    }
+    if (update.type === 'item-changed' && update.origin !== origin) {
+      onForeignChange();
+    }
+  });
+  window.addEventListener('pagehide', () => source.close());
+}
+
 if (root) {
+  if (root.dataset.liveUrl) {
+    listen(root.dataset.liveUrl);
+  }
+
   if (root.hasAttribute('data-item-changed')) {
     announceChange();
   }

@@ -3,3 +3,6 @@ allowedHosts =
 
 # cat=basic; type=int+; label=Cache lifetime: Seconds the overview stays cached per backend user (0 disables caching)
 cacheLifetime = 300
+
+# cat=basic; type=int+; label=Live refresh interval: Seconds between background refreshes of the overviews of logged-in backend users, pushed to open overviews. Needs EXT:mercure (ochorocho/typo3-mercure) with a configured hub and a running messenger worker (0 disables)
+refreshInterval = 120

@@ -14,10 +14,12 @@ final readonly class ExtensionSettings
 {
     /**
      * @param list<string> $allowedHosts additional hosts besides gitlab.com and github.com, lower case
+     * @param int $refreshInterval seconds between live refreshes of the logged-in users' overviews, 0: off
      */
     public function __construct(
         public array $allowedHosts = [],
         public int $cacheLifetime = 300,
+        public int $refreshInterval = 120,
     ) {}
 
     public static function fromExtensionConfiguration(ExtensionConfiguration $extensionConfiguration): self
@@ -33,6 +35,7 @@ final readonly class ExtensionSettings
         return new self(
             array_values(array_filter($hosts, static fn(string $host): bool => $host !== '')),
             max(0, (int)($configuration['cacheLifetime'] ?? 300)),
+            max(0, (int)($configuration['refreshInterval'] ?? 120)),
         );
     }
 }

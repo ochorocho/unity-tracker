@@ -13,6 +13,9 @@ use Ochorocho\UnityTracker\Filter\FilterDefinition;
 use Ochorocho\UnityTracker\Filter\FilterRepository;
 use Ochorocho\UnityTracker\Filter\SavedFilter;
 use Ochorocho\UnityTracker\Item\Category;
+use Ochorocho\UnityTracker\Live\LiveUpdates;
+use Ochorocho\UnityTracker\Live\OverviewRefresh;
+use Ochorocho\UnityTracker\Live\Topics;
 use Ochorocho\UnityTracker\Service\FetchError;
 use Ochorocho\UnityTracker\Service\Overview;
 use Ochorocho\UnityTracker\Service\OverviewService;
@@ -30,7 +33,7 @@ final readonly class OverviewController
 {
     /** Label keys the web components need. */
     private const COMPONENT_LABELS = [
-        'overview.attention', 'overview.allDone', 'overview.nothing', 'item.draft', 'item.openExternal',
+        'overview.attention', 'overview.allDone', 'overview.fetchedAt', 'overview.nothing', 'item.draft', 'item.openExternal',
         'column.title', 'column.project', 'column.reason', 'column.author', 'column.updated', 'column.connection',
         'sort.ascending', 'sort.descending',
         'filter.search', 'filter.placeholder', 'filter.clear', 'filter.save', 'filter.update', 'filter.saved',
@@ -46,6 +49,8 @@ final readonly class OverviewController
         private FilterRepository $filterRepository,
         private PageRenderer $pageRenderer,
         private ItemTablePresenter $itemTablePresenter,
+        private LiveUpdates $liveUpdates,
+        private OverviewRefresh $overviewRefresh,
     ) {}
 
     public function overviewAction(ServerRequestInterface $request): ResponseInterface
@@ -71,7 +76,7 @@ final readonly class OverviewController
             'hasConnections' => $hasConnections,
             'overview' => $overview,
             'errors' => $overview !== null ? $this->errors($overview) : [],
-            'component' => $overview !== null ? $this->componentData($overview, $savedFilters, $backendUser, (int)($query['filter'] ?? 0)) : [],
+            'component' => $overview !== null ? $this->componentData($overview, $savedFilters, $backendUser, (int)($query['filter'] ?? 0), $this->liveUrl($request, $backendUser)) : [],
             'newConnectionUri' => $this->context->uri('newConnection'),
         ]);
         return $view->renderResponse('Overview');
@@ -83,7 +88,7 @@ final readonly class OverviewController
      * @param list<SavedFilter> $savedFilters
      * @return array<string, string>
      */
-    private function componentData(Overview $overview, array $savedFilters, int $backendUser, int $activeFilter): array
+    private function componentData(Overview $overview, array $savedFilters, int $backendUser, int $activeFilter, string $liveUrl): array
     {
         $categories = array_map(static fn(Category $category): array => [
             'key' => $category->value,
@@ -121,8 +126,21 @@ final readonly class OverviewController
                 'newFilter' => $this->context->uri('newFilter'),
                 'editFilter' => $this->context->uri('editFilter'),
                 'filters' => $this->context->uri('filters'),
+                'live' => $liveUrl,
             ],
         ]);
+    }
+
+    /**
+     * Hub URL for the rows the worker pushes (see OverviewRefresh), "" without live updates.
+     */
+    private function liveUrl(ServerRequestInterface $request, int $backendUser): string
+    {
+        if (!$this->overviewRefresh->isAvailable()) {
+            return '';
+        }
+        $this->overviewRefresh->keepRunning();
+        return $this->liveUpdates->subscribe($request, Topics::user($backendUser));
     }
 
     /**

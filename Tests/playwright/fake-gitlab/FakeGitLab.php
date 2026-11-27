@@ -12,6 +12,7 @@ use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Response;
 use Psr\Http\Message\RequestInterface;
+use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Registry;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -100,7 +101,12 @@ final class FakeGitLab
      */
     private function state(): array
     {
-        $state = GeneralUtility::makeInstance(Registry::class)->get(self::NAMESPACE, 'state');
+        // From the table, not Registry::get(): the registry keeps entries in memory, the messenger worker of the
+        // test database (a long-running process) would never see a change.
+        $value = GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable('sys_registry')
+            ->select(['entry_value'], 'sys_registry', ['entry_namespace' => self::NAMESPACE, 'entry_key' => 'state'])
+            ->fetchOne();
+        $state = is_string($value) ? unserialize($value, ['allowed_classes' => false]) : null;
         return is_array($state) ? $state : [
             'title' => 'Fix login redirect',
             'description' => "Fixes the **login** redirect.\n\n- [x] Tests\n- [ ] Docs",

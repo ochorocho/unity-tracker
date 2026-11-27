@@ -9,7 +9,7 @@
 
     <f:if condition="{hasConnections}">
         <f:then>
-            <p class="text-body-secondary">
+            <p class="text-body-secondary" data-fetched-at>
                 <f:translate key="overview.fetchedAt" extensionName="UnityTracker" arguments="{0: '{f:format.date(date: overview.fetchedAt, format: \'d.m.Y H:i\')}'}" />
             </p>
 
